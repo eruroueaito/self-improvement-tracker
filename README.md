@@ -15,7 +15,7 @@ The basic MVP contains no account, cloud sync, analytics, advertising, remote as
 
 ## Development
 
-Requirements: Node.js 20+ and npm.
+Requirements: Node.js 24.14.0 and npm 11.12.1.
 
 ```bash
 npm install
@@ -34,4 +34,4 @@ cd android
 
 Architecture and product decisions are recorded in `docs/adr/` and the accepted MVP specification is in `docs/superpowers/specs/2026-08-04-basic-mvp-design.md`.
 
-The repository has passed TypeScript, Vitest, Playwright, Vite build, and Capacitor sync. An APK was not produced in the original development environment because the complete Android SDK was absent and the Gradle distribution download timed out; this is an explicit release-environment gate rather than a claimed pass.
+The repository has passed TypeScript, Vitest, Playwright, Vite build, Capacitor sync, and clean Ubuntu CI assembly of a verified debug APK. Installation and native plugin smoke evidence still require a ready API 33+ emulator or physical Android device.

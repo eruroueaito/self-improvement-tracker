@@ -257,3 +257,8 @@
 - High 修复复审又捕获同一根因的联合类型边界：既有 Goal/Activity normalizer 只检查 1–5 范围，`3.5` 仍会通过并伪装成 rating。导入层现显式要求 importance/defaultEnergyCost/energyCost 为五个整数之一，防止分数计算与 UI select 接收非法值。
 - N1 设置范围以设计规格为准：本阶段提供可持久化控件，但不实现完整深色主题样式或触觉适配；`notificationsEnabled=false` 已在应用层阻止新的 Countdown 通知，其他主题/动效/触觉/AI 值只作为可靠本地策略保存，不请求权限、不发网络。
 - N1 收口复核确认恢复缺口：MvpApplication 在 load 成功、迁移/写回失败时没有保留已白名单化 recovery envelope，App 的 `snapshot === null` 分支也会覆盖错误信息而永久显示 loading。可在不改 DataStore 的前提下覆盖 localStorage/v1 写回失败等已拿到原始快照的路径；store.initialize/load 自身失败仍只能重试并保留数据库。
+- N2 静态接入点审计确认 `Goal` 与 `ActivityTemplate` 已是一对多事实集合，现有 schema v2 足以承载多活动；不应为 N2 增加迁移或第二进度事实来源。
+- N2 的核心耦合点是 `GoalsScreen.editGoal` 只取第一条 active Activity，以及 `MvpApplication.updateGoal` 同时修改 Goal 与 Activity；实施时应先补 Goal-only update 和 Activity create/update/archive/restore 原子命令，再扩展 selectors 与 UI。
+- `selectGoalFeedback` 已从 Session/RewardLedger 派生 progress/cumulative/experience，Goal 详情的进度与最近活动应继续从这些事实派生；撤销后显示一致性需要成为 N2 专项回归。
+- 当前唯一阻止 N2 规格冻结的产品决策是详情信息层级：A Roll 优先、B 管理优先或 C 复盘优先。该选择只影响 UI 层级，不改变已确认的数据/应用边界。
+- 自动分析 inventory 把 `.tools/gradle` 缓存计入全仓语言统计，原始文件占比不代表产品源码；N2 分析报告只依据 `src/`、`e2e/`、`android/app`、配置和路线文档。

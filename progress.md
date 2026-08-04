@@ -222,3 +222,11 @@
 - 初始化恢复链 code-review 无新增发现；simplify 保留应用层安全 envelope、App 状态机和 RecoveryScreen 三层边界，避免 UI 接触原始未知对象。当前 TypeScript、14 files/62 tests、55 产品文件/2 manifest 网络门槛与 2 条移动 E2E 通过，进入 W6 最终确定性审计。
 - W6 审计进展：runtime audit 为 0 漏洞，产品源码无 secret-shaped 字段声明，production build 与 Android cap sync 通过；`92a10a8` 远端 Android CI 全绿并上传 debug APK。待恢复页提交的远端 CI 通过后关闭确定性 W6，真实设备 SQLite/文件选择/强杀证据继续单列待补。
 - 恢复页提交 `cacac81` 的远端 Android CI run `30932401567` 全绿（3m26s），debug APK、manifest/哈希与 artifact 上传成功。W6 确定性范围完成；N1 实现可继续进入 N2，但 N1 最终签收仍明确等待真实 API 33+ 设备上的旧库升级、文件选择、通知和强杀恢复证据。
+
+## 2026-08-05 N2 接入点审计
+
+- 按 planning-with-files 与 skill-analyzer 流程完成确定性仓库扫描、分层源码追踪、reverse dependency 检查和 N2 变更地图；报告位于 `skill-analyzer-output/report.md`，结构校验通过。
+- 确认 N2 不需要 schema v3：多 Activity 已由独立事实集合表达。实施主线应为独立应用命令 -> selectors -> 按已批准取向拆分 Catalog/详情/活动编辑 -> 开发种子 -> E2E。
+- 分析发现 README 的 Node/npm 与 APK 状态已落后，已同步为固定 Node 24.14.0/npm 11.12.1、远端 CI 已生成 debug APK、真实 API 33+ 设备冒烟仍待补。
+- 生成的 JSON inventory/dependency cache 仅供本地确定性扫描使用并已忽略；只保留可审查的中文 findings/report 进入版本控制。
+- N2 产品取向仍等待用户从 A Roll 优先、B 管理优先、C 复盘优先中确认；在确认前不冻结 UI 规格、不进入实现。

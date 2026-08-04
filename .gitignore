@@ -15,3 +15,4 @@ android/build/
 *.log
 .DS_Store
 Thumbs.db
+skill-analyzer-output/*.json
