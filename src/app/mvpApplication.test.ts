@@ -73,4 +73,31 @@ describe('MvpApplication offline loop', () => {
     expect(app.getSnapshot().sessions[0]?.status).toBe('voided');
     expect(app.getSnapshot().companionProjection.globalXp).toBe(0);
   });
+
+  it('does not schedule a new countdown notification when the local policy is disabled', async () => {
+    const clock = new FakeClock();
+    const scheduled: string[] = [];
+    const notificationSpy: NotificationPort = {
+      async scheduleCountdown(sessionId) { scheduled.push(sessionId); },
+      async cancelCountdown() {},
+    };
+    const app = new MvpApplication(new MemoryStore(), clock, new FakeIds(), notificationSpy, exportFiles);
+    await app.initialize();
+    await app.createGoal(
+      { title: '无通知目标', importance: 3, feedback: { type: 'experience' }, defaultEnergyCost: 2 },
+      { title: '无通知活动', minimumMinutes: 10, maximumMinutes: 20, energyCost: 2 },
+    );
+    const settings = app.getSnapshot().settings;
+    settings.notificationsEnabled = false;
+    await app.updateSettings(settings);
+    const rolled = await app.roll({ availableMinutes: 15, energy: 2, contexts: [] });
+    await app.startSession({
+      runId: rolled.run.id,
+      activityId: rolled.run.candidates[0]!.activityTemplateId,
+      timerMode: 'countdown',
+      plannedMinutes: 15,
+    });
+
+    expect(scheduled).toEqual([]);
+  });
 });

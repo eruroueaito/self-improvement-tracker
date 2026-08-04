@@ -49,6 +49,21 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
 
   await page.getByRole('button', { name: '目标' }).click();
   await page.getByText('本地数据与设置').click();
+  await page.getByLabel('主题').selectOption('dark');
+  await page.getByLabel('动态效果').selectOption('reduced');
+  await page.getByLabel('启用触觉策略').uncheck();
+  await page.getByLabel('允许新的倒计时通知').uncheck();
+  await page.getByLabel('启用 AI 功能策略（不含 API 密钥）').check();
+  await page.getByLabel('允许 AI 使用本地历史策略').check();
+  await page.reload();
+  await page.getByRole('button', { name: '目标' }).click();
+  await page.getByText('本地数据与设置').click();
+  await expect(page.getByLabel('主题')).toHaveValue('dark');
+  await expect(page.getByLabel('动态效果')).toHaveValue('reduced');
+  await expect(page.getByLabel('启用触觉策略')).not.toBeChecked();
+  await expect(page.getByLabel('允许新的倒计时通知')).not.toBeChecked();
+  await expect(page.getByLabel('启用 AI 功能策略（不含 API 密钥）')).toBeChecked();
+  await expect(page.getByLabel('允许 AI 使用本地历史策略')).toBeChecked();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: '导出 JSON' }).click();
   const download = await downloadPromise;
@@ -59,7 +74,13 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
   const exported = JSON.parse(exportContents);
   expect(exported.format).toBe('self-improvement-tracker');
   expect(exported.version).toBe(2);
-  expect(exported.data.settings.ai).toEqual({ enabled: false, historyEnabled: false });
+  expect(exported.data.settings).toEqual({
+    theme: 'dark',
+    motion: 'reduced',
+    hapticsEnabled: false,
+    notificationsEnabled: false,
+    ai: { enabled: true, historyEnabled: true },
+  });
 
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: '清空全部本地数据' }).click();

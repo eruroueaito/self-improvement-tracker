@@ -148,6 +148,10 @@ export function App() {
               setScreen(active ? 'focus' : ended ? 'settlement' : 'goals');
               setNotice('导入完成，宠物进度已从奖励账本重建。');
             })}
+            onSettingsChange={(settings) => executeCommand(async () => {
+              await application.updateSettings(settings);
+              setNotice('设置已保存在本机。');
+            })}
             onClear={() => executeCommand(async () => {
               if (!window.confirm('确定清空全部本地目标、专注、历史和奖励吗？此操作不能撤销。')) return;
               await application.clearAllData();

@@ -210,3 +210,8 @@
 - High 修复复审补齐 Goal/Activity rating 整数约束与 3.5 回归用例。simplify 检查确认白名单显式展开、预览/确认分层和 execute 布尔适配均承担安全边界，不做压缩式重构。
 - 浏览器闭环已更新为 v2 导出与两次同文件导入：首次预览后取消并断言旧状态不变，第二次预览后明确确认才恢复数据；同时断言导出包含默认非秘密 settings。
 - W3 终审无剩余代码发现，simplify 无额外改动；固定 Node 24 下 TypeScript、14 files/60 tests、53 产品文件/2 manifest 网络门槛、移动 Edge E2E、Vite production build、Android cap sync 与 diff check 全部通过。W3 标记完成，真实 Android 文件选择/SQLite 仍随 N1 原生门槛补证。
+- W5 设置 UI 开始：新增无网络/无权限的 SettingsPanel，覆盖主题、动效、触觉、通知、AI 与 AI 历史策略，并嵌入本地数据入口；下一步接应用门面保存、样式与刷新持久化 E2E。
+- SettingsPanel 已通过 App 壳接入原子 `updateSettings`，成功显示本地保存提示、失败复用全局错误且受控控件保持旧值；移动端双列/单列布局与可触达 checkbox 样式已补齐，准备类型与交互验证。
+- E2E 已扩展为修改六项策略、刷新后复核持久化，并要求 v2 导出逐字段包含所选非秘密 settings；现有应用门面已在通知策略关闭时跳过新的 Countdown 通知安排。
+- 新增通知策略应用层回归：关闭 notificationsEnabled 后开始 Countdown 仍保存绝对时间事实，但不会调用 NotificationPort.scheduleCountdown。
+- W5 阶段 code-review 无发现，simplify 检查保留 SettingsPanel 的显式六项策略映射与受控表单，不做抽象压缩。TypeScript、14 files/61 tests、54 产品文件/2 manifest 网络门槛、移动 Edge 刷新/导出/导入 E2E、production build、Android cap sync 与 diff check 全部通过，W5 标记完成。

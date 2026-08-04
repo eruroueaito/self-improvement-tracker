@@ -38,7 +38,7 @@
 - [x] W2：迁移应用初始化及 Memory/localStorage 原子契约
 - [x] W4：实现 SQLite 双版本状态机、事务写入与失败注入（52 项本地测试通过；真实 Android 旧库证据仍属于 N1 最终门槛）
 - [x] W3：实现 v1/v2 导入预览、确认、v2 导出与安全恢复导出（14 files/60 tests、E2E、build/cap sync 已通过）
-- [ ] W5：实现设置 UI 与 N1 端到端验收
+- [x] W5：实现基础设置 UI 与 N1 端到端验收（14 files/61 tests、刷新持久化 E2E、build/cap sync 已通过）
 - [ ] W6：执行 code-review、simplify、完整验证与选择性提交
 - [ ] 实现版本化迁移、AppSettings、事务失败回滚和导入导出 v2
 - [ ] 完成 v1→v2、SQLite 契约、失败注入和秘密排除测试
@@ -230,3 +230,4 @@
 | W3 首轮类型检查仍有两处集成测试调用已移除的直接 `importData` | 1 | 产品代码类型通过到测试边界；把旧测试改为 `previewImport` 无写入断言与 `confirmImport` 显式提交，不保留绕过确认语义的兼容入口 |
 | 同一补丁在测试 hunk 末尾遗留空 `@@`，导致后续 task_plan 更新被解析为 hunk 内容 | 1 | apply_patch 原子拒绝且未产生修改；拆成两个各自完整的补丁后成功更新测试与错误记录 |
 | 更新 E2E 与 progress 的组合补丁再次在文件切换前遗留空 `@@` | 1 | apply_patch 原子拒绝且未修改文件；先单独应用完整 E2E hunk，再以真实末行上下文更新规划文件 |
+| PowerShell 下用 `rg src/app/*.test.ts` 查询通知测试，Windows 不展开该 glob | 1 | 已直接读到产品分支确认 notificationsEnabled 门槛；后续用 `rg ... src/app -g '*.test.ts'` 搜索测试，不重复无效路径 |

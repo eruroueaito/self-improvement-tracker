@@ -10,6 +10,8 @@ import type { ImportPreview } from '../../app/importExport';
 import type { AppSnapshot } from '../../app/ports';
 import { selectGoalFeedback } from '../../app/selectors';
 import type { ActivityDraft, FeedbackConfig, GoalDraft, GoalStatus } from '../../modules/goals/types';
+import type { AppSettings } from '../../modules/settings/settings';
+import { SettingsPanel } from '../settings/SettingsPanel';
 
 export function GoalsScreen(props: {
   snapshot: AppSnapshot;
@@ -20,6 +22,7 @@ export function GoalsScreen(props: {
   onExport: () => Promise<void>;
   onPreviewImport: (contents: string) => ImportPreview;
   onConfirmImport: (contents: string) => Promise<boolean>;
+  onSettingsChange: (settings: AppSettings) => Promise<void>;
   onClear: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(props.snapshot.goals.length === 0);
@@ -189,6 +192,8 @@ export function GoalsScreen(props: {
 
       <details className="card settings">
         <summary>本地数据与设置</summary>
+        <SettingsPanel settings={props.snapshot.settings} busy={props.busy} onChange={props.onSettingsChange} />
+        <hr />
         <p>导出包含全部目标、专注、历史、奖励和非秘密设置，不包含密钥。</p>
         <div className="actions">
           <button disabled={props.busy} onClick={() => void props.onExport()}>导出 JSON</button>
