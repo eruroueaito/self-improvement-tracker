@@ -108,3 +108,50 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
   await expect(page.getByText('导入完成，宠物进度已从奖励账本重建。')).toBeVisible();
   expect(unexpectedNetworkTargets).toEqual([]);
 });
+
+test('initialization failure offers a sanitized recovery file without clearing local data', async ({ page }) => {
+  const unexpectedNetworkTargets: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (!['127.0.0.1', 'localhost'].includes(url.hostname)) unexpectedNetworkTargets.push(request.url());
+  });
+
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('self-improvement-tracker:v1', JSON.stringify({
+      schemaVersion: 2,
+      goals: [],
+      activities: [],
+      recommendationRuns: [],
+      sessions: [],
+      rewardEntries: [],
+      companionProjection: { globalXp: 0, level: 1, evolutionStage: 'seed', mood: 'idle', lastUpdatedAt: 1 },
+      settings: {
+        theme: 'system',
+        motion: 'system',
+        hapticsEnabled: true,
+        notificationsEnabled: true,
+        ai: { enabled: false, historyEnabled: false, apiKey: 'must-not-export' },
+      },
+    }));
+  });
+  await page.reload();
+
+  await expect(page.getByRole('heading', { name: '无法打开本地数据' })).toBeVisible();
+  await expect(page.getByText(/恢复文件已改用安全默认设置/)).toBeVisible();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: '导出可恢复数据' }).click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const recoveryContents = Buffer.concat(chunks).toString('utf8');
+  expect(recoveryContents).not.toContain('apiKey');
+  expect(recoveryContents).not.toContain('must-not-export');
+  expect(JSON.parse(recoveryContents).data.settings.ai).toEqual({ enabled: false, historyEnabled: false });
+
+  await page.getByRole('button', { name: '重试打开' }).click();
+  await expect(page.getByRole('heading', { name: '无法打开本地数据' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('self-improvement-tracker:v1'))).toContain('must-not-export');
+  expect(unexpectedNetworkTargets).toEqual([]);
+});

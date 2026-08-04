@@ -215,3 +215,9 @@
 - E2E 已扩展为修改六项策略、刷新后复核持久化，并要求 v2 导出逐字段包含所选非秘密 settings；现有应用门面已在通知策略关闭时跳过新的 Countdown 通知安排。
 - 新增通知策略应用层回归：关闭 notificationsEnabled 后开始 Countdown 仍保存绝对时间事实，但不会调用 NotificationPort.scheduleCountdown。
 - W5 阶段 code-review 无发现，simplify 检查保留 SettingsPanel 的显式六项策略映射与受控表单，不做抽象压缩。TypeScript、14 files/61 tests、54 产品文件/2 manifest 网络门槛、移动 Edge 刷新/导出/导入 E2E、production build、Android cap sync 与 diff check 全部通过，W5 标记完成。
+- 提交 `92a10a8` 已推送且远端 Android CI 正在运行；W6 复核发现初始化失败恢复页尚未接线，继续实现可重试错误页与安全恢复下载，不把它留给设备阻塞。
+- MvpApplication 现会在 load 成功后立即构造仅含可验证事实的 recovery envelope，并在初始化完全成功后清除；新增最小 RecoveryScreen，只提供错误摘要、重试和可用时的安全导出，不提供自动清库。
+- App 初始化已改为可重试状态机：加载中、成功路由和失败恢复页互斥；失败不再被 loading 分支遮挡，安全导出失败也只更新错误信息。恢复页完成移动端布局接线，下一步补门面与真实浏览器恶意 settings 恢复测试。
+- 恢复测试已补齐：应用层覆盖 v1 写回失败的 recovery 文件与 v2 非法 settings 的默认值回退；Playwright 真实注入含 apiKey 的 localStorage，验证恢复页可见、下载无秘密、重试不清库且全程无外网请求。
+- 初始化恢复链 code-review 无新增发现；simplify 保留应用层安全 envelope、App 状态机和 RecoveryScreen 三层边界，避免 UI 接触原始未知对象。当前 TypeScript、14 files/62 tests、55 产品文件/2 manifest 网络门槛与 2 条移动 E2E 通过，进入 W6 最终确定性审计。
+- W6 审计进展：runtime audit 为 0 漏洞，产品源码无 secret-shaped 字段声明，production build 与 Android cap sync 通过；`92a10a8` 远端 Android CI 全绿并上传 debug APK。待恢复页提交的远端 CI 通过后关闭确定性 W6，真实设备 SQLite/文件选择/强杀证据继续单列待补。

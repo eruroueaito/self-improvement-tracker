@@ -256,3 +256,4 @@
 - W3 code-review 发现 1 项 High 数据完整性问题：`validateSnapshotFacts` 虽调用领域 normalizer，却最终深拷贝原始行；因此 `description` 为对象、Session `plannedMinutes/runningSince/targetDurationMs` 为错误类型等未覆盖字段可进入运行态并导致 UI/计时异常。修复应在返回前逐字段重建已校验事实，而不是继续信任原对象。
 - High 修复复审又捕获同一根因的联合类型边界：既有 Goal/Activity normalizer 只检查 1–5 范围，`3.5` 仍会通过并伪装成 rating。导入层现显式要求 importance/defaultEnergyCost/energyCost 为五个整数之一，防止分数计算与 UI select 接收非法值。
 - N1 设置范围以设计规格为准：本阶段提供可持久化控件，但不实现完整深色主题样式或触觉适配；`notificationsEnabled=false` 已在应用层阻止新的 Countdown 通知，其他主题/动效/触觉/AI 值只作为可靠本地策略保存，不请求权限、不发网络。
+- N1 收口复核确认恢复缺口：MvpApplication 在 load 成功、迁移/写回失败时没有保留已白名单化 recovery envelope，App 的 `snapshot === null` 分支也会覆盖错误信息而永久显示 loading。可在不改 DataStore 的前提下覆盖 localStorage/v1 写回失败等已拿到原始快照的路径；store.initialize/load 自身失败仍只能重试并保留数据库。

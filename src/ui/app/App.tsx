@@ -5,7 +5,7 @@
  * 依赖关系：React、应用门面、Goals/Roll/Focus/Settlement/History 页面
  * 注意事项：UI 不直接访问数据库；跨模块状态只通过应用门面改变
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createMvpApplication } from '../../app/composition';
 import type { AppSnapshot } from '../../app/ports';
 import { FocusScreen } from '../focus/FocusScreen';
@@ -14,6 +14,7 @@ import { HistoryScreen } from '../history/HistoryScreen';
 import { RollScreen } from '../roll/RollScreen';
 import { SettlementScreen } from '../settlement/SettlementScreen';
 import { companionEmoji } from '../shared/presentation';
+import { RecoveryScreen } from './RecoveryScreen';
 
 type Tab = 'goals' | 'roll' | 'history';
 type Screen = Tab | 'focus' | 'settlement';
@@ -34,25 +35,32 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [tick, setTick] = useState(0);
   const recoveryInFlight = useRef(false);
 
   const refresh = (): void => setSnapshot(application.getSnapshot());
 
-  useEffect(() => {
-    void application.initialize().then((initial) => {
+  const openApplication = useCallback(async (): Promise<void> => {
+    setInitializing(true);
+    setError(null);
+    try {
+      const initial = await application.initialize();
       setSnapshot(initial);
       const active = initial.sessions.find((session) => session.status === 'running' || session.status === 'paused');
       const ended = initial.sessions.find((session) => session.status === 'ended');
-      if (active) {
-        setActiveSessionId(active.id);
-        setScreen('focus');
-      } else if (ended) {
-        setActiveSessionId(ended.id);
-        setScreen('settlement');
-      }
-    }).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : '应用初始化失败'));
+      setActiveSessionId(active?.id ?? ended?.id ?? null);
+      setCurrentRunId(null);
+      setScreen(active ? 'focus' : ended ? 'settlement' : 'roll');
+    } catch (cause) {
+      setSnapshot(null);
+      setError(cause instanceof Error ? cause.message : '应用初始化失败');
+    } finally {
+      setInitializing(false);
+    }
   }, [application]);
+
+  useEffect(() => { void openApplication(); }, [openApplication]);
 
   useEffect(() => {
     if (screen !== 'focus') return;
@@ -92,7 +100,27 @@ export function App() {
     await execute(operation);
   };
 
-  if (!snapshot) return <main className="loading" aria-live="polite">正在打开本地数据…</main>;
+  if (!snapshot) {
+    if (initializing) return <main className="loading" aria-live="polite">正在打开本地数据…</main>;
+    return (
+      <RecoveryScreen
+        error={error ?? '应用初始化失败'}
+        recovery={application.getRecoveryExportStatus()}
+        busy={busy}
+        onRetry={openApplication}
+        onExportRecovery={async () => {
+          setBusy(true);
+          try {
+            await application.exportRecoveryToFile();
+          } catch (cause) {
+            setError(cause instanceof Error ? cause.message : '恢复数据导出失败');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    );
+  }
 
   const currentRun = currentRunId
     ? snapshot.recommendationRuns.find((run) => run.id === currentRunId) ?? null

@@ -22,7 +22,13 @@ import {
 } from '../modules/sessions/sessionMachine';
 import type { Session, SessionEndAction, SettlementDraft, TimerMode } from '../modules/sessions/types';
 import { createDefaultAppSettings, normalizeAppSettings, type AppSettings } from '../modules/settings/settings';
-import { buildExportEnvelope, summarizeImport, type ImportPreview } from './importExport';
+import {
+  buildExportEnvelope,
+  buildRecoveryExport,
+  summarizeImport,
+  type ImportPreview,
+  type RecoveryExport,
+} from './importExport';
 import { migrateSnapshot } from './migrations';
 import type { AppSnapshot, Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort } from './ports';
 import { validateImportEnvelope } from './importValidation';
@@ -34,6 +40,7 @@ export interface CreateGoalResult {
 
 export class MvpApplication {
   private snapshot: AppSnapshot | null = null;
+  private recoveryExport: RecoveryExport | null = null;
 
   constructor(
     private readonly store: DataStore,
@@ -44,9 +51,12 @@ export class MvpApplication {
   ) {}
 
   async initialize(): Promise<AppSnapshot> {
+    this.snapshot = null;
+    this.recoveryExport = null;
     await this.store.initialize();
     const loaded = await this.store.load();
     if (loaded) {
+      this.recoveryExport = buildRecoveryExport(loaded, this.clock.now());
       const migrated = migrateSnapshot(loaded);
       if (migrated.migratedFrom !== null) await this.store.replace(migrated.snapshot);
       this.snapshot = migrated.snapshot;
@@ -56,6 +66,7 @@ export class MvpApplication {
       this.snapshot = initial;
     }
     await this.recoverActiveSession();
+    this.recoveryExport = null;
     return this.getSnapshot();
   }
 
@@ -373,6 +384,20 @@ export class MvpApplication {
   async exportToFile(): Promise<void> {
     const filename = `self-improvement-tracker-${new Date(this.clock.now()).toISOString().slice(0, 10)}.json`;
     await this.exportFiles.save(this.exportData(), filename);
+  }
+
+  getRecoveryExportStatus(): Pick<RecoveryExport, 'sourceVersion' | 'settingsRecovered'> | null {
+    if (!this.recoveryExport) return null;
+    return {
+      sourceVersion: this.recoveryExport.sourceVersion,
+      settingsRecovered: this.recoveryExport.settingsRecovered,
+    };
+  }
+
+  async exportRecoveryToFile(): Promise<void> {
+    if (!this.recoveryExport) throw new ValidationError('当前没有可安全导出的恢复数据');
+    const filename = `self-improvement-tracker-recovery-${new Date(this.clock.now()).toISOString().slice(0, 10)}.json`;
+    await this.exportFiles.save(this.recoveryExport.contents, filename);
   }
 
   private prepareImport(serialized: string): { sourceVersion: 1 | 2; snapshot: AppSnapshot } {

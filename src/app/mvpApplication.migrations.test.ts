@@ -1,6 +1,6 @@
 /**
  * 模块名称：应用初始化迁移测试
- * 职责描述：验证 v1 启动迁移、v2 幂等启动和 replace 失败时的内存一致性
+ * 职责描述：验证 v1 启动迁移、v2 幂等启动、失败一致性与安全恢复导出
  * 输入/输出：以可控 DataStore 初始化 MvpApplication 并断言持久态与运行态
  * 依赖关系：Vitest、MvpApplication、版本化快照夹具
  * 注意事项：失败用例必须证明旧持久数据未被替换
@@ -38,7 +38,8 @@ const notifications: NotificationPort = {
   async cancelCountdown() {},
 };
 const exportFiles: ExportFilePort = { async save() {} };
-const createApp = (store: DataStore) => new MvpApplication(store, clock, ids, notifications, exportFiles);
+const createApp = (store: DataStore, files: ExportFilePort = exportFiles) =>
+  new MvpApplication(store, clock, ids, notifications, files);
 
 describe('MvpApplication migration initialization', () => {
   it('migrates v1 once and persists the current snapshot', async () => {
@@ -70,11 +71,36 @@ describe('MvpApplication migration initialization', () => {
     const legacy = createEmptyPersistedSnapshotV1();
     const store = new ControlledStore(legacy);
     store.failReplace = true;
-    const app = createApp(store);
+    const saved: Array<{ contents: string; filename: string }> = [];
+    const app = createApp(store, { async save(contents, filename) { saved.push({ contents, filename }); } });
 
     await expect(app.initialize()).rejects.toThrow('injected replace failure');
     expect(store.persisted).toEqual(legacy);
     expect(() => app.getSnapshot()).toThrow('应用尚未初始化');
+    expect(app.getRecoveryExportStatus()).toEqual({ sourceVersion: 1, settingsRecovered: null });
+    await app.exportRecoveryToFile();
+    expect(saved[0]?.filename).toMatch(/^self-improvement-tracker-recovery-/);
+    expect(JSON.parse(saved[0]!.contents)).toMatchObject({ format: 'self-improvement-tracker', version: 1 });
+  });
+
+  it('exports safe defaults when current facts are valid but settings are unsafe', async () => {
+    const unsafe = {
+      ...createEmptyPersistedSnapshotV1(),
+      schemaVersion: 2,
+      settings: {
+        ...createDefaultAppSettings(),
+        ai: { enabled: false, historyEnabled: false, apiKey: 'secret-value' },
+      },
+    } as unknown as PersistedSnapshot;
+    const saved: string[] = [];
+    const app = createApp(new ControlledStore(unsafe), { async save(contents) { saved.push(contents); } });
+
+    await expect(app.initialize()).rejects.toThrow(/settings.*不受支持的字段/);
+    expect(app.getRecoveryExportStatus()).toEqual({ sourceVersion: 2, settingsRecovered: false });
+    await app.exportRecoveryToFile();
+    expect(saved[0]).not.toContain('apiKey');
+    expect(saved[0]).not.toContain('secret-value');
+    expect(JSON.parse(saved[0]!).data.settings).toEqual(createDefaultAppSettings());
   });
 
   it('keeps runtime and persisted settings unchanged when an update fails', async () => {
