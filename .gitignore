@@ -2,8 +2,10 @@ node_modules/
 dist/
 coverage/
 output/playwright/
+output/android-smoke/
 .playwright-cli/
 .superpowers/
+.tools/
 .env
 .env.*
 !.env.example

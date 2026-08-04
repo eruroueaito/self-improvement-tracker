@@ -5,6 +5,11 @@
   "description": "A fully local-first self-improvement tracker.",
   "license": "MIT",
   "type": "module",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": "24.14.0",
+    "npm": "11.12.1"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -13,7 +18,11 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "cap:sync": "npm run build && cap sync android"
+    "cap:sync": "npm run build && cap sync android",
+    "verify:n0:env": "node scripts/verify-n0-environment.mjs",
+    "verify:n0:network": "node scripts/verify-network-boundary.mjs",
+    "verify:n0:android-smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-android-smoke.ps1",
+    "test:n0:android-smoke-runner": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-android-smoke-runner.ps1"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "8.1.0",

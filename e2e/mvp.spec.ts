@@ -3,11 +3,17 @@
  * 职责描述：验证创建、Roll、Flowtime、结算、撤销、重载、导出清空和导入的真实 UI 流程
  * 输入/输出：驱动本机 Edge 页面并断言可见状态和下载数据
  * 依赖关系：Playwright Test、运行中的本地 Vite 应用
- * 注意事项：每次测试先清理该测试浏览器上下文的 localStorage，不触碰用户浏览器数据
+ * 注意事项：每次测试清理该上下文的 localStorage，并断言页面没有访问本机测试源之外的网络目标
  */
 import { expect, test } from '@playwright/test';
 
 test('offline MVP loop persists and round-trips all local data', async ({ page }) => {
+  const unexpectedNetworkTargets: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (!['127.0.0.1', 'localhost'].includes(url.hostname)) unexpectedNetworkTargets.push(request.url());
+  });
+
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -64,4 +70,5 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
   });
   await expect(page.getByRole('heading', { name: '阅读' })).toBeVisible();
   await expect(page.getByText('导入完成，宠物进度已从奖励账本重建。')).toBeVisible();
+  expect(unexpectedNetworkTargets).toEqual([]);
 });

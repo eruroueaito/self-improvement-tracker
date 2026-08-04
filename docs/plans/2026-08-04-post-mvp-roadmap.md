@@ -95,9 +95,10 @@ flowchart LR
 ### 工作包
 
 1. **固定可复现工具链**
-   - 固定 Node LTS 版本，避免继续以 Node 25 的边缘行为作为默认环境；
-   - 安装并记录 JDK 21、Android SDK Platform 36、Build Tools、platform-tools；
-   - 恢复 Gradle 8.14.3 分发包并记录校验；
+   - 固定 Node `24.14.0`、npm `11.12.1`，避免继续以 Node 25 的边缘行为作为默认环境；
+   - 本地构建记录 Oracle JDK `21.0.6+8`；CI 固定 Temurin `21.0.6+7`，两者都记录完整 `java -version`；
+   - 固定 Android command-line tools `15859902`、SDK Platform 36、Build Tools `35.0.0` 和对应 platform-tools；
+   - 恢复 Gradle `8.14.3-all`，校验 SHA-256 `ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c`；
    - 增加环境检查脚本，只检查确定性条件，不使用 AI。
 
 2. **完成 Android 构建证据**
@@ -108,15 +109,23 @@ flowchart LR
 
 3. **原生插件冒烟**
    - SQLite：创建目标、完成一次闭环、强杀、重启、记录仍在；
-   - Notifications：允许和拒绝权限都不改变 Session 真相；
+   - Notifications：在 API 33+ 的允许态记录排程、后台/锁屏展示和 Session 结束后取消证据；拒绝态无崩溃且 Session 仍按持久事实恢复；
+   - Doze/无精确闹钟权限时允许通知延迟，但不允许改变 Countdown 的绝对时间完成事实，延迟必须作为提醒降级明确记录；
    - Filesystem/Share：导出 JSON 能被系统分享，导入可恢复；
    - Countdown：后台、锁屏和重启后按绝对时间恢复；
    - 无网络：飞行模式下除 AI 外全部功能可用。
 
-4. **建立 CI 基线**
+4. **证明无意外网络出口**
+   - 检查 debug merged manifest，N0 必须不含 `android.permission.INTERNET`；
+   - 为 WebView 增加 CSP，禁止远程脚本、字体、图片和默认连接；开发期只放行本机 Vite/HMR；
+   - 静态扫描产品代码中的 `fetch`、XHR、WebSocket、远程 URL 和远程资源；
+   - 在线运行 Web 壳时记录请求，除本机测试源外不得访问任何网络目标。
+
+5. **建立 CI 基线**
    - 新增 `.github/workflows/ci.yml`；
-   - 固定 Node/JDK，执行 typecheck、Vitest、Playwright、build、cap sync；
-   - 条件允许时生成未签名 debug APK artifact；
+   - 使用固定 runner、Node/npm、JDK、command-line tools、Platform 36、Build Tools 35.0.0 与 Gradle 校验；
+   - 强制执行 `npm ci`、typecheck、Vitest、安装的 Playwright Chromium、Playwright、build、cap sync 和 `assembleDebug`；CI 不依赖预装 Edge；
+   - 上传 Android 默认 debug key 生成的 debug-signed APK 与 SHA-256；未生成 APK 时 CI 必须失败；
    - CI 不接触真实 API key、签名文件或用户数据。
 
 ### 主要文件
@@ -129,9 +138,10 @@ flowchart LR
 ### 退出标准
 
 - `assembleDebug` 成功，APK 可安装；
+- CI 从干净检出独立完成 `assembleDebug`，上传 debug-signed APK 和校验值；
 - 在真实 Android Runtime 上完成“创建 → Roll → Focus → 结算 → 撤销 → 重启 → 导出/导入”；
-- 通知拒绝、离线和强杀不会造成静默数据丢失；
-- CI 可从干净检出重建 Web 产物并同步 Android。
+- 通知允许态可排程/展示/取消；拒绝、Doze 降级、离线和强杀不会造成静默数据丢失；
+- merged manifest 无 INTERNET 权限，CSP、静态扫描和运行时请求记录共同证明 N0 无意外网络出口。
 
 ## 6. N1：数据、迁移与设置底座 v2
 
