@@ -1,7 +1,7 @@
 # Self Improvement Tracker 基本 MVP 设计规格
 
-日期：2026-08-04  
-状态：待独立规格审查  
+日期：2026-08-04
+状态：已通过独立规格审查（第三轮，2026-08-04）
 总体方向：用户已批准方案 B（模块化单体 + 纵向里程碑）
 
 ## 1. 目标与截止条件
@@ -85,7 +85,7 @@ src/
 type GoalStatus = 'active' | 'paused' | 'archived';
 
 type FeedbackConfig =
-  | { type: 'progress'; current: number; target: number; unit: string }
+  | { type: 'progress'; baseline: number; target: number; unit: string }
   | { type: 'cumulative'; unit: 'minutes' | 'times' }
   | { type: 'experience' };
 
@@ -104,7 +104,16 @@ interface Goal {
 }
 ```
 
-标题去除首尾空白后必须为 1–80 字符。progress 的 target 必须大于 0，current 位于 0 到 target 之间。cadence 为空或大于 0，休息时间不得为负。
+标题去除首尾空白后必须为 1–80 字符。progress 的 target 必须大于 0，baseline 位于 0 到 target 之间。cadence 为空或大于 0，休息时间不得为负。
+
+Goal 的反馈值是派生视图，不由结算直接累加到 Goal 行：
+
+- `progress`：`min(target, baseline + sum(quantity))`，只汇总该 Goal 下“有效完成”的、未撤销 Session；这些 Session 的 quantity 必须存在，quantityUnit 展示为 Goal 的 unit；
+- `cumulative/minutes`：汇总该 Goal 下所有未撤销、非 abandoned 结算的 actualMinutes；
+- `cumulative/times`：统计该 Goal 下“有效完成”的 Session 数；
+- `experience`：显示 RewardLedger 中该 Goal 的净 goalXp 及 `floor(max(0, goalXp) / 50) + 1`。
+
+编辑 progress 的 baseline 只改变之后的派生起点，不改历史 Session。撤销通过排除 voided Session 和 reversal 账目自然反映到反馈视图，不执行容易重复的反向字段更新。
 
 ### 4.2 ActivityTemplate
 
@@ -126,7 +135,7 @@ interface ActivityTemplate {
 }
 ```
 
-分钟为整数，`1 <= minimumMinutes <= maximumMinutes <= 480`。contexts 经过去空白、小写化和去重。MVP 中活动 contexts 表示所需场景；用户未提供当前场景时不做场景过滤，提供时活动的所有非空 contexts 必须包含在当前场景集合中。
+分钟为整数，`1 <= minimumMinutes <= maximumMinutes <= 480`。`rewardWeight` 必须是 0.25–3 之间的有限数。contexts 经过去空白、小写化和去重。MVP 中活动 contexts 表示所需场景；用户未提供当前场景时不做场景过滤，提供时活动的所有非空 contexts 必须包含在当前场景集合中。
 
 ### 4.3 RecommendationRun
 
@@ -157,6 +166,8 @@ interface RecommendationRun {
 ```
 
 Roll 历史保存在本地，用于解释评分和显式“暂不想做”惩罚。关闭结果不自动等于拒绝。
+
+`availableMinutes` 必须是 1–480 的整数。RollContext.contexts 与活动 contexts 使用相同的标准化规则。
 
 ### 4.4 Session 与 Settlement
 
@@ -199,6 +210,10 @@ interface Settlement {
 Flowtime 的 plannedMinutes 和 targetDurationMs 为空。Countdown 两者必须存在。展示时长通过 `accumulatedMs + max(0, now - runningSince)` 计算；页面每秒刷新不写永久状态。
 
 同一时刻只能有一个非 voided 的 running/paused Session。系统时间向后跳时本次运行段按 0 增量处理并显示恢复提示；系统时间向前跳超过 24 小时时要求用户确认结束时间，不自动奖励。
+
+Settlement 的验证边界：actualMinutes 是 0–1440 的有限数，completionRatio 是 0–1 的有限数，quantity 为空或为 0–1,000,000 的有限数，quantityUnit 去除首尾空白后最多 24 字符，userNote 最多 2,000 字符。progress Goal 的“有效完成”结算必须提供 quantity；其他反馈类型允许 quantity 为空。
+
+本规格中的“有效完成”统一指：Session 已结算且未撤销（`status === 'settled'`），`endType === 'completed'`，并且 `completionRatio >= 0.5`。休息期、cadence、recency、variety、最近完成惩罚和 cumulative/times 全部只查询有效完成；若某项规则需要别的集合，会明确写出。
 
 ### 4.5 RewardLedgerEntry 与 CompanionProjection
 
@@ -246,27 +261,38 @@ RewardLedger 是奖励事实来源。CompanionProjection 是可重建缓存。�
 每个分项先限制到稳定范围，再线性相加：
 
 - importance：`goal.importance * 10`；
-- cadenceNeed：有 cadence 时按距上次完成天数/周期计算，范围 0–20；
-- recencyNeed：距上次完成越久越高，范围 0–10；
-- timeFit：建议时长越接近可用时间越高，范围 0–15；
-- energyFit：提供精力时按差值给 0–10，未提供时给中性 5；
+- cadenceNeed：`cadence = activity.suggestedCadenceDays ?? goal.desiredCadenceDays`；活动 cadence 存在时使用该活动上次有效完成，只有目标 cadence 时使用该目标任一活动上次有效完成；无 cadence 给 0，无历史给 20，否则为 `clamp(elapsedDays / cadence * 20, 0, 20)`；
+- recencyNeed：使用该活动上次有效完成；无历史给 10，否则为 `clamp(elapsedDays / 30 * 10, 0, 10)`；
+- timeFit：`clamp(suggestedMinutes / availableMinutes * 15, 0, 15)`；
+- energyFit：未提供精力给 5，否则为 `clamp(10 - 2.5 * abs(context.energy - activity.energyCost), 0, 10)`；
 - varietyBonus：最近两次结算未出现该 goal 时加 6；
 - explicitDismissPenalty：24 小时内用户明确点过“暂不想做”减 12；
 - recentCompletionPenalty：24 小时内完成过同一活动减 15。
 
-suggestedMinutes 是 `availableMinutes` 限制在活动 minimum/maximum 之间的整数。最终按 score 降序、activityTemplateId 升序稳定排序，返回最多三个。每次权重变化必须由测试说明预期行为变化。
+`elapsedDays = max(0, now - settledAt) / 86_400_000`。最近两次结算仅指按 `settledAt` 降序、Session id 升序打破同时间平局的两次有效完成。dismiss 仅来自 RecommendationRun.dismissedActivityTemplateIds；同一活动只施加一次 -12。suggestedMinutes 是 `availableMinutes` 限制在活动 minimum/maximum 之间的整数。每个 scorePart 和总 score 在计算完成后四舍五入到小数点后三位；最终按 score 降序、activityTemplateId 升序稳定排序，返回最多三个。每次权重变化必须由测试说明预期行为变化。
 
 ## 6. Session 状态机
 
 - `start`：创建 running Session；Countdown 同时安排本地通知；
 - `pause`：把当前运行段累加到 accumulatedMs，runningSince 置空；
 - `resume`：runningSince 设为当前时间；
-- `end`：固化 actual elapsed，取消通知，进入 ended；
+- `end`：固化 actual elapsed，取消通知，按下面的唯一映射写入 endType 并进入 ended；
 - `recover`：应用启动或回到前台时根据持久字段重新计算；Countdown 到期后进入 ended/completed，通知是否展示不影响结果；
 - `settle`：只允许 ended Session，原子写 Settlement + RewardLedger + CompanionProjection；
 - `undo`：对已结算 Session 创建唯一 reversal entry，并把 Session 标为 voided；历史记录保留。
 
 重复 settle、重复 undo 和重复按钮点击必须幂等。
+
+结束动作与 endType 的唯一映射：
+
+- Flowtime 点击普通“完成”：`completed`；
+- Flowtime 在退出确认中选择“中断并结算”：`interrupted`；
+- Countdown 自然到期，或恢复时发现已到目标：`completed`；
+- Countdown 未到目标时点击“提前结束”，或在退出确认中选择“中断并结算”：`interrupted`；
+- 任一模式在退出确认中选择“放弃本次”：`abandoned`；
+- “继续后台计时”不结束 Session，也不设置 endType。
+
+Flowtime 普通“完成”表达用户主观确认已完成，不以时长阈值改写。Countdown 到期前不存在 `completed` 快捷路径；用户若已提前做完，应使用“提前结束”，在 Settlement 中用 completionRatio 表达完成程度，但 endType 仍是 `interrupted`。一旦 Session 进入 ended，Settlement 不允许更改 endType，避免奖励和长期反馈被表单重分类。
 
 ## 7. 奖励规则 v1
 
@@ -281,7 +307,9 @@ suggestedMinutes 是 `availableMinutes` 限制在活动 minimum/maximum 之间�
 
 `xp = round(baseXp * completionRatio * effortMultiplier * rewardWeight)`，effort 为空时 multiplier 为 1；1–5 映射为 0.9、0.975、1.05、1.125、1.2。结果限制在 0–50。
 
-同一活动 30 分钟内第二次结算奖励乘 0.5，第三次及以后为 0，但 Session 仍保存。difficulty 不影响 XP。
+abandoned 的 XP 固定为 0。completed 和 interrupted 在 completionRatio 大于 0 时可按公式获得 XP，因此部分投入不会被抹掉，但只有符合第 4.4 节定义的“有效完成”才影响 cadence 等长期反馈。
+
+同一活动 30 分钟内第二次“可奖励结算”乘 0.5，第三次及以后为 0，但 Session 仍保存。“可奖励结算”指未撤销、非 abandoned 且 completionRatio 大于 0 的 settled Session；窗口按当前 settledAt 与此前 settledAt 比较。difficulty 不影响 XP。
 
 目标 XP 等于最终 XP。全局 XP 与目标 XP 都通过同一账本事务写入。stage 阈值为 seed `<100`、sprout `100–299`、companion `>=300`；level 为 `floor(globalXp / 50) + 1`，并保存历史最高等级避免撤销导致掉级。
 
@@ -311,7 +339,7 @@ interface ExportEnvelopeV1 {
 }
 ```
 
-导入先完整校验，再在单事务中替换数据。验证失败不修改现有数据。导出不含密钥、临时 UI 状态或通知 ID。
+导入先完整校验，再在单事务中替换数据。验证失败不修改现有数据。导入不信任导出的 CompanionProjection：替换事实表后按 RewardLedger 的 createdAt 升序、entry id 升序重放，重建净 XP、历史最高 level、stage 与投影；导出的 projection 只用于格式完整性校验。导出不含密钥、临时 UI 状态或通知 ID。
 
 ## 9. UI 流程
 
@@ -320,7 +348,7 @@ interface ExportEnvelopeV1 {
 - 卡片显示目标名、反馈类型、最近活动和状态；
 - 可创建/编辑 Goal 和至少一个 ActivityTemplate；
 - 可暂停、恢复、归档；
-- 设置入口提供导出、导入、清空示例数据和减少动态选项。
+- 设置入口提供导出、导入、清空全部本地数据和减少动态选项。应用默认不写示例数据；清空操作二次确认后以单事务删除全部事实与投影数据，并回到空白首次使用状态。
 
 ### Roll
 
@@ -332,9 +360,9 @@ interface ExportEnvelopeV1 {
 
 ### Focus
 
-- 只显示活动名、计时、暂停/继续、结束和退出；
+- 只显示活动名、计时、暂停/继续、完成或提前结束，以及退出；按钮文案按第 6 节的 endType 映射变化；
 - Countdown 到期进入 Settlement；通知拒绝不阻止流程；
-- 退出前明确选择继续后台计时或放弃。
+- 退出前明确选择继续后台计时、中断并结算或放弃本次。
 
 ### Settlement
 
@@ -394,4 +422,3 @@ interface ExportEnvelopeV1 {
 ## 13. 许可与供应链
 
 原创代码 MIT。依赖引入前记录包名、版本、许可证、来源和用途到 `THIRD_PARTY_NOTICES.md`。禁止 GPL/AGPL/SSPL/NC 或许可证不明依赖进入发布包。MVP 不复制 Sidejot、Perfice、Super Productivity、Loop 或 Habitica 的代码和素材。
-

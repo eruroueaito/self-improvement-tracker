@@ -101,3 +101,24 @@
 - Node.js `v25.8.2`、npm `11.12.1`、Java 21 已可用。
 - `ANDROID_HOME` 与 `ANDROID_SDK_ROOT` 未设置；需在 M0 风险基线中查找本机 Android SDK，找不到时仍可生成 Android 工程并完成 Web/TypeScript 验证，但不能把原生构建误报为已验证。
 - `writing-plans` skill 未出现在当前可用技能列表；在已批准方案 B 下，用现有 `planning-with-files` 和项目内实施计划作为最小安全回退。
+- 2026-08-04 npm 核验的兼容基线：React 19.2.8、Vite 8.2.0、Capacitor 8.5.0、Capacitor Community SQLite 8.1.0、Capacitor Local Notifications 8.2.1、Vitest 4.1.10，均标注 MIT；SQLite/通知插件 peer dependency 均接受 Capacitor Core 8+。
+- Playwright Test 1.62.1 标注 Apache-2.0，Node 要求 >=20，与当前环境兼容。
+- 常见 Android SDK 目录未找到，但 `D:\tools\platform-tools\adb.exe` 存在；当前证据只证明 platform-tools 可用，不证明 Gradle Android 构建所需的 SDK Platforms/Build Tools 已安装。
+- 进一步检查确认没有可调用的 `sdkmanager` 或系统 Gradle，`D:\tools` 也只有独立 platform-tools；本机当前不能证明具备 Android SDK。Capacitor 自带 Gradle Wrapper 可在工程生成后使用，但仍需要后续 SDK 平台包。
+
+## MVP 独立规格审查
+
+- 第一轮独立审查确认总体边界可实施，但指出确定性 Roll 若只有区间没有公式，会让实现和测试产生不同排序；评分公式、舍入、历史集合和 cadence 优先级必须全部落到规格。
+- Goal 的 progress/cumulative/experience 采用事实派生视图，避免结算和撤销重复修改 Goal 聚合字段；progress 以 baseline 加未撤销有效完成的 quantity 推导。
+- “有效完成”统一为 settled、未撤销、completed 且 completionRatio >= 0.5；部分/中断投入仍可获得按比例 XP，但不推进 cadence、rest、times 等长期反馈。
+- 全量清空与示例数据清理不能共用含糊文案；MVP 默认不写示例数据，设置中的操作明确为二次确认后的全量本地事实/投影清空。
+- 导入后的 CompanionProjection 必须从 RewardLedger 重放重建，不能信任导出缓存。
+
+## 基本 MVP 实现与验证结论
+
+- Capacitor SQLite 的 `execute/run` 默认 `transaction=true`；已经显式开始外层 SettlementTransaction 时，所有内层调用必须传 `false`，否则“看起来有事务”的代码仍可能分段提交。
+- Android WebView 的普通 Blob download 不能作为可靠移动端导出证据；MVP 通过 Filesystem cache + 系统 Share sheet 交付 JSON，浏览器仍保留本地下载适配器。
+- Android 清单默认的 `allowBackup=true` 和 INTERNET 权限不符合本项目完全本地边界；已关闭备份/明文流量并移除网络权限。
+- `npm audit --omit=dev` 为 0；完整 audit 的 3 个 moderate 都位于 Capacitor CLI → xcode → uuid 的开发期 iOS 解析链，不进入 Android 运行时包。
+- Gradle wrapper 两次有限下载均未获得任何分发包字节，且本机没有完整 Android SDK；APK 构建不能声称通过。Android 工程生成、四插件识别与 cap sync 已独立通过。
+- 初次超时安装产生的可重建损坏 node_modules/lockfile 已清理；源码、文档和本地产品数据未删除。

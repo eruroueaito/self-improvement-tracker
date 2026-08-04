@@ -1,6 +1,8 @@
 node_modules/
 dist/
 coverage/
+output/playwright/
+.playwright-cli/
 .superpowers/
 .env
 .env.*
@@ -11,4 +13,3 @@ android/build/
 *.log
 .DS_Store
 Thumbs.db
-
