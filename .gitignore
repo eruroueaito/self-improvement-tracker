@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.superpowers/
+.env
+.env.*
+!.env.example
+android/.gradle/
+android/app/build/
+android/build/
+*.log
+.DS_Store
+Thumbs.db
+
