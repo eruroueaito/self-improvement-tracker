@@ -96,7 +96,7 @@ flowchart LR
 
 1. **固定可复现工具链**
    - 固定 Node `24.14.0`、npm `11.12.1`，避免继续以 Node 25 的边缘行为作为默认环境；
-   - 本地构建记录 Oracle JDK `21.0.6+8`；CI 固定 Temurin `21.0.6+7`，两者都记录完整 `java -version`；
+   - 本地构建记录 Oracle JDK `21.0.6+8`；CI 固定 Temurin `21.0.6+7.0.LTS`，两者都记录完整 `java -version`；
    - 固定 Android command-line tools `15859902`、SDK Platform 36、Build Tools `35.0.0` 和对应 platform-tools；
    - 恢复 Gradle `8.14.3-all`，校验 SHA-256 `ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c`；
    - 增加环境检查脚本，只检查确定性条件，不使用 AI。
