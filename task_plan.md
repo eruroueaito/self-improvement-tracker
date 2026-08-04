@@ -39,10 +39,10 @@
 - [x] W4：实现 SQLite 双版本状态机、事务写入与失败注入（52 项本地测试通过；真实 Android 旧库证据仍属于 N1 最终门槛）
 - [x] W3：实现 v1/v2 导入预览、确认、v2 导出与安全恢复导出（14 files/60 tests、E2E、build/cap sync 已通过）
 - [x] W5：实现基础设置 UI 与 N1 端到端验收（14 files/61 tests、刷新持久化 E2E、build/cap sync 已通过）
-- [ ] W6：执行 code-review、simplify、完整验证与选择性提交
-- [ ] 实现版本化迁移、AppSettings、事务失败回滚和导入导出 v2
-- [ ] 完成 v1→v2、SQLite 契约、失败注入和秘密排除测试
-- [ ] 执行审查、简化、验证与独立提交
+- [x] W6：执行 code-review、simplify、完整确定性验证与选择性提交（真实 Android 原生证据仍为 N1 最终门槛）
+- [x] 实现版本化迁移、AppSettings、事务失败回滚和导入导出 v2
+- [x] 完成 v1→v2、SQLite 契约、失败注入和秘密排除测试
+- [x] 执行审查、简化、验证与独立提交
 
 ### 阶段 13：N2 离线产品能力补全（待开始）
 

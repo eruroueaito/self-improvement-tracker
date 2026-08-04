@@ -221,3 +221,4 @@
 - 恢复测试已补齐：应用层覆盖 v1 写回失败的 recovery 文件与 v2 非法 settings 的默认值回退；Playwright 真实注入含 apiKey 的 localStorage，验证恢复页可见、下载无秘密、重试不清库且全程无外网请求。
 - 初始化恢复链 code-review 无新增发现；simplify 保留应用层安全 envelope、App 状态机和 RecoveryScreen 三层边界，避免 UI 接触原始未知对象。当前 TypeScript、14 files/62 tests、55 产品文件/2 manifest 网络门槛与 2 条移动 E2E 通过，进入 W6 最终确定性审计。
 - W6 审计进展：runtime audit 为 0 漏洞，产品源码无 secret-shaped 字段声明，production build 与 Android cap sync 通过；`92a10a8` 远端 Android CI 全绿并上传 debug APK。待恢复页提交的远端 CI 通过后关闭确定性 W6，真实设备 SQLite/文件选择/强杀证据继续单列待补。
+- 恢复页提交 `cacac81` 的远端 Android CI run `30932401567` 全绿（3m26s），debug APK、manifest/哈希与 artifact 上传成功。W6 确定性范围完成；N1 实现可继续进入 N2，但 N1 最终签收仍明确等待真实 API 33+ 设备上的旧库升级、文件选择、通知和强杀恢复证据。
