@@ -71,3 +71,130 @@
 - 已确认后续主要缺口：可回滚迁移与 AppSettings、完整 ActivityTemplate/Goal 详情体验、真实伙伴状态、AI Provider/SecretStore/Schema、可访问性/隐私/发布硬化、iOS 适配；whisper.cpp 延后到发布后 RFC。
 - 已创建 `docs/plans/2026-08-04-post-mvp-roadmap.md`：包含 N0–N7、发布后 E1、关键依赖、共同门槛、工作包、测试、退出标准、立即执行清单和明确不做项。
 - 已完成结构检查：9 个阶段章节、依赖顺序一致、代码围栏成对；本轮仅修改计划与研究文档，未修改产品代码，因此不重复运行产品测试。
+
+## 2026-08-04 N0→N7 持续开发
+
+- 用户明确要求按照新路线从 N0 连续开发到 N7，以 N7 完成作为截止目标。
+- 已执行 MemSkill recall、planning-with-files 会话恢复并读取 brainstorming 工作流；既有方案 B、Post-MVP 路线图和用户本轮指令共同构成已批准设计，当前进入 N0。
+- 已把 `task_plan.md` 的总目标扩展到 N7，并建立 N0–N7 的持久阶段清单；总目标保持进行中。
+- N0 首轮只读环境检查确认 Java 21 和 adb server 可启动，尚无 Android 设备证据；其余工具链信息将分项复核。
+- N0 分项环境核验完成：Node/npm 可用但为 Node 25；Java 21 可用但无 `JAVA_HOME`；Android SDK、sdkmanager、系统 Gradle 和 Gradle wrapper cache 均缺失，仅有独立 platform-tools。
+- 已找到可复用的本地 Node 24.14.0 LTS 运行时和真实 JDK 21 目录；Android 工程要求 AGP 8.13.0、Gradle 8.14.3、SDK 36，下一步在规格复审通过后固定版本并安装缺失 SDK 组件。
+- 已从官方 Android/Gradle 文档核验 command-line tools 15859902 的下载校验、AGP 8.13 的兼容范围和 Gradle 8.14.3 分发包；N0 将固定版本并执行哈希校验。
+- N0 实施规格已交独立审查；等待审查结果期间只完成环境与官方版本证据核验，尚未安装 SDK 或修改产品代码。
+- N0 规格首轮复审返回 Issues Found；已补齐强制 CI APK、精确工具链、通知允许/拒绝/Doze 证据和 CSP/manifest/运行时无网络出口门槛，准备第二轮复审。
+- 已检查 Playwright、CSP、通知、导出和端到端测试现状：Edge 硬编码与 CSP 缺失需要在 N0 修复，当前产品代码尚无主动网络 API 或远程资源。
+- N0 规格第二轮复审 Approved，开始实现。
+- 已新增 Node/npm engines、Gradle SHA pin、Windows SDK 安装器、N0 环境/网络验证脚本、CSP、Playwright Chromium/运行时无外网断言、强制 APK CI 和 Android smoke 记录模板；尚待执行安装与验证。
+- 第一批验证通过：Node 24 下 TypeScript、Vitest 6 files/14 tests、N0 网络边界（38 个产品文件/1 个 manifest）和 Vite build；发现现有 npm CLI 实际为 11.11.1，准备安装仓库隔离的 11.12.1 后重验。
+- 仓库隔离的 npm 11.12.1 已安装并验证。
+- 首次 Android SDK 下载经 curl 约三分钟仍为 0 字节，已终止并把安装器改为 BITS/Invoke-WebRequest；尚未重复下载。
+- 尝试在重试前显式清理安装器留下的空临时目录时，包含递归 `Remove-Item` 的 PowerShell 命令被执行策略拒绝；目录为空且新安装使用唯一临时目录，因此不再把清理和安装串联，直接单独运行 BITS 安装器。
+- BITS 重试已成功获得并解压固定 command-line tools；sdkmanager Java 进程正在继续处理许可证/组件，Platform 36/Build Tools/模拟器尚未出现，保持 N0 未完成。
+- sdkmanager 现已从许可证阶段进入五个固定组件的安装命令，并建立远端 443 连接；继续等待实际文件落盘。
+- sdkmanager 批量组件下载数分钟仍无任何文件增长，已终止；采用不同路径，通过 BITS 读取官方仓库元数据并逐包安装，避免重复同一 Java 下载失败。
+- 已通过 BITS 获取并解析官方 Android 仓库元数据，定位 Platform 36、Build Tools 35 和 Platform Tools 37.0.1 的 Windows 归档；准备按元数据校验逐包安装。
+- 正在解析稳定 emulator 与 API 36 system image 元数据；首次脚本使用 PowerShell 7 的 `?.` 语法，而环境为 Windows PowerShell 5.1，已停止并改用显式 null 分支。
+- 已固定稳定 emulator 37.1.11、API 36 Google APIs x86_64 r07，以及三个构建包的官方 URL/大小/SHA-1；准备把安装器改为 BITS 逐包下载、校验和精确目录解压。
+- Windows SDK 安装器已改为 BITS 逐包下载并校验大小/SHA-1，支持 `-SkipEmulator` 先安装构建必需包；不再依赖已卡住的 sdkmanager 包下载通道。
+- 安装器重复运行时会复用已校验落盘的 command-line tools 和组件目录，不重复下载 155 MB 工具包。
+- 首次运行逐包安装器在 PowerShell 5.1 解析无 BOM UTF-8 中文字符串时失败，未开始下载；已把 `.ps1` 运行文本改为 ASCII 并补齐条件括号，准备复验。
+- 安装器 ASCII/语法复验通过；逐包安装进程运行中，三个构建组件尚未落盘，正在定位当前子步骤。
+- 已确认安装器卡在 sdkmanager license 远端读取，终止后改为强制显式 `-AcceptSdkLicense` 参数；没有伪造 sdkmanager 成功或生成许可证哈希文件。
+- Android 构建必需 SDK 组件已通过 BITS 逐包安装完成；下一步安装并校验 Gradle 8.14.3，然后运行 N0 环境验证与 assembleDebug。
+- 已新增独立的 Gradle 8.14.3 BITS/SHA-256 安装器；环境验证在本地优先使用该隔离分发包，CI 仍强制使用仓库 wrapper。
+- Gradle 官方归档下载与 SHA 验证已完成，当前仍在解压，尚未出现最终 `gradle.bat` 安装证据。
+- Gradle 8.14.3 已安装完成；环境验证首次运行因带空格路径的 `.bat` shell 转义失败，已改为显式 `cmd.exe` 调用并移除 Java 的不必要 shell，准备复验。
+- 显式 cmd 引用仍被 Windows 当作带引号的字面命令；验证器已改用 `java -classpath gradle-launcher-8.14.3.jar`，不再经过 shell。
+- N0 固定环境验证通过；工具链阶段完成，进入 cap sync 与本地 `assembleDebug`。
+- Node 24/npm 11.12.1 下干净 `npm ci`、Vite build、cap sync 已通过（4 plugins）。
+- 首次 Gradle 命令因工作目录相对 launcher 路径错误立即失败；改用绝对仓库 launcher 路径后重试，不重复错误路径。
+- `assembleDebug` 已进入 Gradle 依赖解析，正在通过本机代理连接；保持运行并检查缓存增长，尚未声称构建通过。
+- Gradle 依赖解析约两分钟无任何 cache 增长，已终止；转入代理诊断或 BITS Maven 依赖预取，APK 仍未构建。
+- 已定位 Windows 系统代理为 127.0.0.1:7897；首次把未引用的 `-Dhttp.proxyHost` 直接传给 PowerShell native command 时被错误拆词，尚未重启 Gradle，将改用显式字符串参数。
+- 显式 JVM 代理的 `assembleDebug` 已开始持续下载 Android/Gradle 依赖，cache 增长到约 105 MB；继续等待编译结果。
+- Gradle cache 已继续增长到约 779 MB，进程有效推进但尚无 APK；保持构建运行。
+- 本地 debug APK 首次构建完成并通过大小、SHA、v2 debug 签名、包名和 SDK 级别检查；merged manifest 无 INTERNET。
+- 审计发现网络脚本漏扫 merged XML 且 APK 含未使用生物识别权限；已修复收集器并在 app manifest 显式移除权限，准备增量重建。
+- 增量重建通过类型检查、14 项单测、Vite build、cap sync、assembleDebug、v2 签名和网络边界复核；新 APK 无 INTERNET/生物识别/指纹权限，SHA-256 为 `5ae8393023016f1462af85a825b927f43b0e9e2968d0bafd1cee90fb03ddecfe`。
+- Emulator 37.1.11 安装成功；API 36 system image 已通过大小/SHA-1 校验，但 PowerShell 5.1 `Expand-Archive` 无法处理该 ZIP64 归档。安装器已改用系统 `tar.exe`，准备重新安装镜像。
+- `tar.exe` 路径已成功安装 API 36 system image；首次创建 AVD 暴露 standalone emulator 归档缺少 `package.xml` 登记，安装器已补充固定 37.1.11 的本地 SDK package metadata。
+- Emulator package metadata 补齐后 `sit_n0_api36` 创建成功；首次启动因加速层检测矛盾退出，开始验证无需提权的 `-accel off` 软件回退。
+- x86_64 软件回退实例持续 offline 且无 CPU 进展；已固定同版 API 36 arm64-v8a r07 的官方大小/SHA-1，并为安装器增加可选 ARM64 回退路径。
+- ARM64 AVD 被 QEMU2 明确判定为宿主架构不支持；已在 N0 code review 中移除无效回退，并修复 SDK 组件完整性/版本复核、BITS 回退、精确 JDK/Platform Tools 验证及 CI license 状态检查。
+- N0 code review 与 simplify 已完成实质修复；runtime audit 为 0 漏洞，固定 npm 同步了 lockfile engines。
+- 本机 Playwright Chromium 下载两次受网络阻断；备用 Edge 通道已通过完整 E2E 和运行时无外网断言，CI 仍保留强制 Chromium 门槛。
+- N0 当前环境可运行的最终验证全部通过：精确环境、14 单测、runtime audit 0、网络检查、build/cap sync、Edge E2E、assembleDebug、APK v2 签名/权限/哈希、CI YAML 解析与 diff check。
+- N0 保持进行中：API 36 AVD 已创建，但宿主 WHPX 不可用；等待用户启用 Windows Hypervisor Platform 并重启或连接 Android 设备后，继续安装与原生插件冒烟，再形成独立提交。
+
+## 2026-08-04 自动续跑：N1 规格准备
+
+- 已执行 MemSkill recall 与 planning-with-files session catchup；工作树仍是未提交的 N0 变更，基线提交保持 `2c9cb22`。
+- 复核确认没有重启或新设备，N0 原生冒烟门槛不变；在不降低 N0 退出标准的前提下，开始并行深化 N1 设计规格。
+- 已完成 N1 首轮只读代码映射：原子 replace/内存一致性边界可复用，核心迁移缺口集中在 SQLite schema_version 覆盖、快照版本类型、AppSettings 和 v1-only 导入导出。
+- 已完成 N1 第二轮边界分析：选定“persisted union → 纯迁移 → 校验 → 原子写回”的最小方案，并把导入预览、非秘密设置与失败一致性纳入规格草案。
+- 已对照原始需求与 `998d494` 核实 v1 权威形状；准备按已批准方案 B 写 N1 独立设计规格，不重写 Repository、不提前接入 AI。
+- 已核清 SQLite 双版本边界：原生 DDL version 仅负责表结构，app_meta/纯迁移链负责快照数据；缺失的包内升级文档已记为一次工具资料错误。
+- 已直接检查 SQLite 8.1.0 的 TypeScript/Android 源码，确认 DDL upgrade 的事务与 version 更新语义，可写入 N1 规格。
+- 已新增 `docs/superpowers/specs/2026-08-04-n1-data-migrations-settings-design.md`，完整定义版本 union、AppSettings、纯迁移链、SQLite 双版本边界、导入预览、失败恢复和验收证据；进入独立规格审查。
+- N1 规格已单独提交为 `4a25fe5`，未包含 N0 工作树；提交后发现三处 whitespace 问题并已在工作树修正，待规格审查完成后一并 amend。
+- N1 独立规格首轮返回 2 个 High；已补齐 SQLite 双版本状态矩阵和秘密安全的恢复导出语义，准备第二轮审查。
+- N1 规格第二轮复审确认秘密安全恢复已关闭，但发现旧库 native version 基线误判；已对照 `998d494` 和插件 Android 源码修正为真实 `native 0 + meta1`，补齐升级前预检与两类失败重试状态，准备终审。
+- N1 规格第三轮终审结果为 Approved；SQLite 双版本矩阵、失败重试语义和秘密安全恢复均无剩余问题。规格现等待用户书面复核，尚未开始 N1 产品代码实现。
+
+## 2026-08-04 自动续跑：N0 设备门槛复核与冒烟自动化
+
+- MemSkill recall 后重新检查当前状态：系统仍未重启，ADB 无设备，API 36 AVD 的 accel 检查仍返回 6；N0 退出门槛保持不变。
+- 两次递归搜索 SDK 路径均因范围过大超时，随后从既有会话证据精确恢复 SDK 根目录 `D:\Android\Sdk`，不再进行整盘递归搜索。
+- 新增 `scripts/run-android-smoke.ps1` 与 npm 入口：设备可用时自动执行 API 33+ 预检、安装/启动、进程与无 INTERNET 断言，并生成隐私受限的原生证据目录；同时更新 smoke 操作说明。
+- 首次用 Windows PowerShell 5.1 执行脚本时发现参数默认表达式阶段的 `$PSScriptRoot` 为空；已把依赖脚本目录的默认值移到参数绑定后计算，准备复验无设备失败路径。
+- N0 smoke code-review 发现并修正三项证据可靠性缺口：纯设备预检不再要求 APK；logcat 以设备启动前时间为锚点避免 PID 复用旧日志；启动后最多等待 10 秒并硬断言固定 SQLite 数据库文件存在。
+- simplify 保留现有窄函数与线性流程，没有为压缩行数引入抽象；另补充设备 `base.apk` SHA-256 与本地 APK 比对，避免 `-SkipInstall` 检查点误用旧安装。
+- N0 smoke 工具最终验证通过：PowerShell AST 无语法错误，npm 参数转发正确，无设备时以可操作消息失败且不生成证据；TypeScript、6 files/14 tests、网络边界（38 个产品文件/2 个 manifest）和全工作树 diff check 继续通过。真实设备成功路径仍明确未验证。
+
+## 2026-08-04 自动续跑：N0 smoke runner 离线契约
+
+- MemSkill recall 后再次确认 ADB 无设备且 emulator accel 返回 6；不改变真实原生门槛。
+- 为 runner 增加显式 ADB 可执行文件注入点，并新增 fake ADB 与离线契约测试，准备覆盖成功、API 过低、多设备、哈希不一致、意外 INTERNET 权限和启动崩溃。
+- 离线成功路径首跑发现 PowerShell 变量大小写不敏感：runner 的 `$pid` 会覆盖只读内置 `$PID` 并在真机启动后失败；已改为 `$appProcessId`，该缺陷正是此前无设备负路径无法发现的。
+- smoke runner code-review 发现 fake ADB 注入可能生成外观近似原生的证据，以及 install 只检查退出码不够严格；已要求显式 `-AllowTestAdb`、目录 `TEST-ONLY-` 前缀和 `evidence_kind: test-double-not-native` 永久标记，并硬断言安装文本含 `Success`。simplify 未做无收益重构。
+- 最终离线契约覆盖成功、API 33 门槛、多设备显式选择、test-double 授权、安装文本、安装哈希、INTERNET 权限和启动崩溃，全部通过且临时证据已安全清理。
+- 相关回归门槛通过：TypeScript、6 files/14 tests、38 产品文件/2 manifest 网络边界、Vite build、4 个 Capacitor 插件同步、3 个 PowerShell 文件语法、真实 ADB 无设备负路径和全工作树 diff check。真实 Android 成功路径仍待设备。
+
+## 2026-08-04 持续目标阻塞审计
+
+- 连续多轮核验结果未变化：ADB 无 ready 设备，系统最后启动时间仍为 2026-07-24 20:55:37，emulator accel 返回 6；N0 真实原生安装与插件冒烟无法执行。
+- N1 规格保持“独立终审通过、待用户书面复核”；按 brainstorming 硬门槛不能擅自进入实现。
+- N0 的所有无设备准备和离线契约已完成，继续增加外围工具不再实质推进 N0–N7。持续目标已按严格阻塞规则标记 blocked；收到 N1 批准或原生环境恢复后继续，完成标准仍是 N7 全量验收。
+
+## 2026-08-04 N1 用户批准与目标恢复
+
+- 用户明确回复“批准 N1”，N1 brainstorming 用户复核门槛已解除；规格状态、task_plan 和项目发现同步更新。
+- 当前环境没有 writing-plans skill；按此前约定使用 planning-with-files 写等价的详细实施计划，再进入 N1 编码。
+- 开始盘点 N0–N7 潜在阻塞：优先区分立即外部阻塞、阶段性外部依赖和可通过提前设计/测试消除的内部风险。
+- 已完成 N1 代码边界复核并新增详细实施计划，拆为 W1–W6 六个可验收工作包；下一步从纯快照迁移与设置类型开始，实现过程不等待 Android 设备或 Git remote。
+- W1 首批代码已落盘：新增非秘密 AppSettings、版本化快照联合、纯 v1→v2 迁移器及测试，并把事实校验从导入入口提升为可复用函数；下一步运行 TypeScript/Vitest，修正现有 v1 应用边界的编译回归。
+- 首次 W1 专项 Vitest 11 项通过；随后用正确的 `npm run typecheck` 捕获旧应用/适配器仍构造 v1 的编译回归，已迁移初始化、空快照、通知开关、设置更新、Memory/localStorage 边界和测试 fixture，SQLite 暂保留 v1 load 形状等待 W4 状态机重构。
+- W1 已补齐独立的真实 v1 形状 fixture、典型/边界字段迁移断言，以及应用初始化的迁移一次性、v2 不重写、迁移写回失败和设置写入失败一致性测试；W1 标记完成，W2 进入适配器契约补强。
+- W1 全量回归首轮仅暴露 fixture 的奖励权重低于既有 0.25 下限，产品迁移逻辑未失败；fixture 已改用合法最小边界并重新进入全量验证。
+- W2 已补强 Memory/localStorage 的双向深拷贝、旧 v1 key 读取和 localStorage 序列化失败保留最后好快照契约；结合初始化/设置失败注入测试，浏览器与内存边界已完成。
+- W1–W2 code-review 发现 1 项 High：SQLite 尚未写 settings/meta2，当前共享层若单独提交会造成原生重复迁移与设置丢失。已决定暂不提交代码并把 W4 提前到 W3 前完成；simplify 仅把迁移入口的冗余 `PersistedSnapshot | unknown` 收窄为 `unknown`，其余窄函数保持不动。
+
+## 2026-08-05 Android 优先与 GitHub 发布
+
+- 用户授权绕开当前外部阻碍继续开发、创建 GitHub 新仓库并上传项目，近期执行顺序调整为 Android 优先；N7 总截止目标不变。
+- 已按 GitHub 发布工作流核验 CLI/auth、混合工作树、ignore 范围、目标仓库名和凭据风险；公开仓库将先接收当前已提交且验证过的基线，N0/N1 脏工作树不使用全量暂存。
+- 公开仓库已创建并推送稳定基线到 `main`；首次 HTTPS push 连接重置后，以仅作用于该命令的本机代理成功完成，未改全局 Git 配置。
+- 已建立 `agent/android-alpha` 分支并精确暂存 19 个 N0 文件。当前工作树验证通过：固定环境、TypeScript、9 files/32 tests、45 产品文件/2 manifest 网络边界及 smoke runner 离线契约；远端 CI 将对不含 N1 工作树的精确提交重新验证。
+- N0 提交 `c98a83e` 已推送并创建草稿 PR #1。首轮 Actions 在 job 前失败；按 gh-fix-ci 工作流定位为 job-level env 使用不可用 runner context，已做单行路径上下文修复，准备独立提交并重跑。
+- W4 第一批纯核心已落盘：SQLite native/app 双版本状态分类、meta 行严格解析、v1/v2 必需表矩阵，以及 meta-last 当前快照事务 writer；fake connection 将逐序号注入 execute/run/commit/rollback 失败。
+- W4 真实适配器已重构为“既有库无升级预检 → 合法状态分类 → 注册 0→2 DDL → 新库安全初始化/旧库保持 meta → v1/v2 load”。当前实现还需通过类型检查并补 fake manager 的连接编排测试。
+- W4 当前 TypeScript 与 15 项 SQLite 专项测试通过。并行 CI 第二轮已进入真实 job，失败点定位为 Temurin 完整版本标识不匹配；精确 JDK/action major/单份 PR 触发修复已落盘，待提交重跑。
+- W4 已增加 fake manager 编排测试，覆盖旧库预检严格发生在 addUpgrade 前、新库空表证明后才写 settings/meta2、native0+meta2 拒绝和非法 current settings 拒绝；准备运行全量回归。
+- W4 code-review 发现并修正 singleton 只筛 id=1 导致畸形额外行被忽略的问题；改为整表读取并严格要求恰好一行/id=1，新增错 ID 拒绝测试。simplify 保留状态判定、连接编排和事务 writer 三层边界，未做跨职责合并。
+- W4 确定性实现完成：TypeScript、12 files/52 tests、50 产品文件/2 manifest 网络门槛和 diff check 通过。阶段可进入 W3，但 N1 仍需真实 Android 上的 `998d494` 旧库升级证据才能最终签收。
+- CI 第三轮已越过此前两处配置阻塞并在 `verify:n0:env` 暴露 Gradle wrapper 缺少 Git 可执行位；当前按最小修复把 `android/gradlew` 从 `100644` 更正为 `100755`，保持 N1 产品代码继续与 CI 基线提交隔离。
+- Gradle wrapper mode 修复后，本机使用固定 Node 24.14.0/npm 11.12.1、JDK 21.0.6+8、SDK 36、Build Tools 35.0.0、Platform Tools 37.0.1 与 Gradle 8.14.3 的 N0 环境门槛重新通过；准备只提交 wrapper mode 并触发远端 Ubuntu 复验。
+- 独立提交 `f1a8df9` 已推送；CI run `30929599851` 已通过环境、TypeScript/测试/网络/E2E 与 cap sync，正在组装 debug APK。确认最终绿灯前继续冻结 N1 远端提交。
+- CI run `30929599851` 最终全绿（3m11s）：debug APK 组装、merged manifest/哈希复核与 artifact 上传全部成功。N0 远端 Android 基线成立，解除 N1 远端提交冻结。
+- N1 W1/W2/W4 在固定 Node 24.14.0/npm 11.12.1 下重新通过 TypeScript、12 files/52 tests、50 产品文件/2 manifest 网络边界与 diff check；准备连同同步后的规划记录形成首个 N1 产品提交。

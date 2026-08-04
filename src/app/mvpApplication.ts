@@ -21,14 +21,16 @@ import {
   resumeSession,
 } from '../modules/sessions/sessionMachine';
 import type { Session, SessionEndAction, SettlementDraft, TimerMode } from '../modules/sessions/types';
-import type { AppSnapshot, Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort } from './ports';
+import { createDefaultAppSettings, normalizeAppSettings, type AppSettings } from '../modules/settings/settings';
+import { migrateSnapshot } from './migrations';
+import type { AppSnapshot, Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort, PersistedSnapshotV1 } from './ports';
 import { validateImportEnvelope } from './importValidation';
 
 interface ExportEnvelopeV1 {
   format: 'self-improvement-tracker';
   version: 1;
   exportedAt: number;
-  data: Omit<AppSnapshot, 'schemaVersion'>;
+  data: Omit<PersistedSnapshotV1, 'schemaVersion'>;
 }
 
 export interface CreateGoalResult {
@@ -50,21 +52,29 @@ export class MvpApplication {
   async initialize(): Promise<AppSnapshot> {
     await this.store.initialize();
     const loaded = await this.store.load();
-    this.snapshot = loaded ?? this.emptySnapshot();
-    if (!loaded) await this.store.replace(this.snapshot);
+    if (loaded) {
+      const migrated = migrateSnapshot(loaded);
+      if (migrated.migratedFrom !== null) await this.store.replace(migrated.snapshot);
+      this.snapshot = migrated.snapshot;
+    } else {
+      const initial = this.emptySnapshot();
+      await this.store.replace(initial);
+      this.snapshot = initial;
+    }
     await this.recoverActiveSession();
     return this.getSnapshot();
   }
 
   private emptySnapshot(): AppSnapshot {
     return {
-      schemaVersion: 1,
+      schemaVersion: 2,
       goals: [],
       activities: [],
       recommendationRuns: [],
       sessions: [],
       rewardEntries: [],
       companionProjection: emptyCompanionProjection(this.clock.now()),
+      settings: createDefaultAppSettings(),
     };
   }
 
@@ -218,7 +228,7 @@ export class MvpApplication {
     run.chosenActivityTemplateId = activity.id;
     next.sessions.push(session);
     await this.commit(next);
-    if (session.targetDurationMs !== null) {
+    if (session.targetDurationMs !== null && next.settings.notificationsEnabled) {
       void this.notifications.scheduleCountdown(session.id, activity.title, session.startedAt + session.targetDurationMs).catch(() => undefined);
     }
     return structuredClone(session);
@@ -356,6 +366,12 @@ export class MvpApplication {
     await this.commit(next);
   }
 
+  async updateSettings(settings: AppSettings): Promise<void> {
+    const next = this.getSnapshot();
+    next.settings = normalizeAppSettings(settings);
+    await this.commit(next);
+  }
+
   exportData(): string {
     const snapshot = this.current();
     const envelope: ExportEnvelopeV1 = {
@@ -388,13 +404,14 @@ export class MvpApplication {
     }
     const data = validateImportEnvelope(parsed);
     const next: AppSnapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       goals: data.goals,
       activities: data.activities,
       recommendationRuns: data.recommendationRuns,
       sessions: data.sessions,
       rewardEntries: data.rewardEntries,
       companionProjection: rebuildCompanionProjection(data.rewardEntries, this.clock.now()),
+      settings: createDefaultAppSettings(),
     };
     await this.commit(next);
   }

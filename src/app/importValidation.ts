@@ -8,7 +8,7 @@
 import type { ActivityTemplate, Goal } from '../modules/goals/types';
 import { normalizeActivityDraft, normalizeGoalDraft, ValidationError } from '../modules/goals/validation';
 import type { RecommendationRun } from '../modules/recommendations/types';
-import type { RewardLedgerEntry } from '../modules/rewards/types';
+import type { CompanionProjection, RewardLedgerEntry } from '../modules/rewards/types';
 import { normalizeSettlement } from '../modules/sessions/sessionMachine';
 import type { Session } from '../modules/sessions/types';
 
@@ -18,6 +18,7 @@ export interface ValidatedImportData {
   recommendationRuns: RecommendationRun[];
   sessions: Session[];
   rewardEntries: RewardLedgerEntry[];
+  companionProjection: CompanionProjection;
 }
 
 type RecordValue = Record<string, unknown>;
@@ -49,18 +50,23 @@ const assertUniqueIds = (items: RecordValue[], label: string): Set<string> => {
   return unique;
 };
 
-export const validateImportEnvelope = (value: unknown): ValidatedImportData => {
-  const envelope = record(value, '导入文件');
-  if (envelope.format !== 'self-improvement-tracker' || envelope.version !== 1) {
-    throw new ValidationError('导入文件格式或版本不受支持');
-  }
-  const data = record(envelope.data, 'data');
+export const validateSnapshotFacts = (value: unknown): ValidatedImportData => {
+  const data = record(value, 'data');
   const goalRows = array(data.goals, 'goals').map((item, index) => record(item, `goals[${index}]`));
   const activityRows = array(data.activities, 'activities').map((item, index) => record(item, `activities[${index}]`));
   const runRows = array(data.recommendationRuns, 'recommendationRuns').map((item, index) => record(item, `recommendationRuns[${index}]`));
   const sessionRows = array(data.sessions, 'sessions').map((item, index) => record(item, `sessions[${index}]`));
   const rewardRows = array(data.rewardEntries, 'rewardEntries').map((item, index) => record(item, `rewardEntries[${index}]`));
-  record(data.companionProjection, 'companionProjection');
+  const projection = record(data.companionProjection, 'companionProjection');
+  finite(projection.globalXp, 'companionProjection.globalXp');
+  finite(projection.level, 'companionProjection.level');
+  finite(projection.lastUpdatedAt, 'companionProjection.lastUpdatedAt');
+  if (!['seed', 'sprout', 'companion'].includes(String(projection.evolutionStage))) {
+    throw new ValidationError('companionProjection.evolutionStage 无效');
+  }
+  if (!['idle', 'working', 'celebrating', 'sleeping'].includes(String(projection.mood))) {
+    throw new ValidationError('companionProjection.mood 无效');
+  }
 
   const goalIds = assertUniqueIds(goalRows, 'goals');
   const activityIds = assertUniqueIds(activityRows, 'activities');
@@ -186,5 +192,14 @@ export const validateImportEnvelope = (value: unknown): ValidatedImportData => {
     recommendationRuns: structuredClone(runRows) as unknown as RecommendationRun[],
     sessions: structuredClone(sessionRows) as unknown as Session[],
     rewardEntries: structuredClone(rewardRows) as unknown as RewardLedgerEntry[],
+    companionProjection: structuredClone(projection) as unknown as CompanionProjection,
   };
+};
+
+export const validateImportEnvelope = (value: unknown): ValidatedImportData => {
+  const envelope = record(value, '导入文件');
+  if (envelope.format !== 'self-improvement-tracker' || envelope.version !== 1) {
+    throw new ValidationError('导入文件格式或版本不受支持');
+  }
+  return validateSnapshotFacts(envelope.data);
 };

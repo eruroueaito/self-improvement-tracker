@@ -5,25 +5,13 @@
  * 依赖关系：四个领域模块的稳定数据类型
  * 注意事项：replace 必须原子替换，失败时保留旧快照
  */
-import type { ActivityTemplate, Goal } from '../modules/goals/types';
-import type { RecommendationRun } from '../modules/recommendations/types';
-import type { CompanionProjection, RewardLedgerEntry } from '../modules/rewards/types';
-import type { Session } from '../modules/sessions/types';
-
-export interface AppSnapshot {
-  schemaVersion: 1;
-  goals: Goal[];
-  activities: ActivityTemplate[];
-  recommendationRuns: RecommendationRun[];
-  sessions: Session[];
-  rewardEntries: RewardLedgerEntry[];
-  companionProjection: CompanionProjection;
-}
+import type { CurrentAppSnapshot, PersistedSnapshot } from './snapshots';
+export type { AppSnapshot, CurrentAppSnapshot, PersistedSnapshot, PersistedSnapshotV1 } from './snapshots';
 
 export interface DataStore {
   initialize(): Promise<void>;
-  load(): Promise<AppSnapshot | null>;
-  replace(snapshot: AppSnapshot): Promise<void>;
+  load(): Promise<PersistedSnapshot | null>;
+  replace(snapshot: CurrentAppSnapshot): Promise<void>;
 }
 
 export interface Clock {
