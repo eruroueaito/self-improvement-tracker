@@ -56,18 +56,33 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   const exportContents = Buffer.concat(chunks).toString('utf8');
-  expect(JSON.parse(exportContents).format).toBe('self-improvement-tracker');
+  const exported = JSON.parse(exportContents);
+  expect(exported.format).toBe('self-improvement-tracker');
+  expect(exported.version).toBe(2);
+  expect(exported.data.settings.ai).toEqual({ enabled: false, historyEnabled: false });
 
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: '清空全部本地数据' }).click();
   await expect(page.getByRole('heading', { name: '阅读' })).toHaveCount(0);
 
-  await page.getByText('本地数据与设置').click();
   await page.locator('input[type="file"]').setInputFiles({
     name: 'backup.json',
     mimeType: 'application/json',
     buffer: Buffer.from(exportContents),
   });
+  await expect(page.getByRole('heading', { name: '确认覆盖本机数据' })).toBeVisible();
+  await expect(page.getByText('v2', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '阅读' })).toHaveCount(0);
+  await page.getByRole('button', { name: '取消' }).click();
+  await expect(page.getByRole('heading', { name: '确认覆盖本机数据' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '阅读' })).toHaveCount(0);
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'backup.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(exportContents),
+  });
+  await page.getByRole('button', { name: '确认导入并覆盖' }).click();
   await expect(page.getByRole('heading', { name: '阅读' })).toBeVisible();
   await expect(page.getByText('导入完成，宠物进度已从奖励账本重建。')).toBeVisible();
   expect(unexpectedNetworkTargets).toEqual([]);

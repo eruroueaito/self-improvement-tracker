@@ -248,3 +248,10 @@
 - 本机仓库内保留固定 npm 11.12.1 与 Gradle 8.14.3，但 Node 24 可执行文件不在 `.tools` 树中；Android SDK 根目录 `D:\Android\Sdk` 仍存在。CI 修复的权威验证是 Git mode diff 与远端 Ubuntu job，本机环境检测需先重新定位既有 Node 24 runtime。
 - CI run `30929599851` 已证明 wrapper mode 修复有效：Ubuntu 上的固定环境检测、TypeScript/测试/网络边界/E2E 与 Capacitor sync 全部通过，当前进入 `assembleDebug`；剩余风险收敛到 Gradle 依赖解析、APK 复核与 artifact 上传。
 - 同一 CI run 最终成功，说明公开仓库可从零安装固定 SDK/JDK/Node 工具链并产出可下载的 debug APK；后续 Android 功能分支可以复用该门槛，不再把本机 WHPX/物理设备缺失当成确定性开发阻塞。
+- W3 采用应用层两阶段导入契约：`previewImport` 只做 parse/validate/migrate/summary 并保留原始不可变字符串，确认时必须重新解析同一字符串后才执行一次 `store.replace`；UI 只持有预览对象和字符串，不持有可被篡改的快照引用。正常导出始终为白名单 v2 envelope。
+- 既有 UI 在文件选择后直接调用 `importData`，应用门面只接受 envelope v1 并立即 replace；W3 需要把门面拆成纯预览与确认提交两个入口，并让 GoalsScreen 显示覆盖摘要。既有 `ExportFilePort` 已适合复用，不需要改 Android Filesystem/Share 适配器。
+- 当前跨模块测试把 `importData` 当作直接写入口；W3 会保留一个显式确认方法而不是静默兼容旧行为，并将集成测试改为“预览无写入 → 确认一次写入”。导出 envelope 从 v1 升到 v2 后，既有离线闭环仍可复用同一 JSON 字符串做清空后恢复。
+- 为避免 `migrations` 与 `importValidation` 形成循环依赖，envelope 校验只返回严格的 `PersistedSnapshot` 与 sourceVersion；应用层随后调用现有纯迁移器。白名单 envelope 构造与预览摘要放入独立应用模块，事实、嵌套结算/候选和 settings 均逐字段复制，防止运行态意外附加字段进入公开备份。
+- 领域类型中唯一开放键集合是 `RecommendationCandidate.scoreParts: Record<string, number>`；W3 白名单不能原样透传任意键，需按 RollEngine 实际稳定键集合重建，并同步补强导入校验，避免伪造 `apiKey` 数值键进入备份。
+- W3 code-review 发现 1 项 High 数据完整性问题：`validateSnapshotFacts` 虽调用领域 normalizer，却最终深拷贝原始行；因此 `description` 为对象、Session `plannedMinutes/runningSince/targetDurationMs` 为错误类型等未覆盖字段可进入运行态并导致 UI/计时异常。修复应在返回前逐字段重建已校验事实，而不是继续信任原对象。
+- High 修复复审又捕获同一根因的联合类型边界：既有 Goal/Activity normalizer 只检查 1–5 范围，`3.5` 仍会通过并伪装成 rating。导入层现显式要求 importance/defaultEnergyCost/energyCost 为五个整数之一，防止分数计算与 UI select 接收非法值。

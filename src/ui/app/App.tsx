@@ -74,17 +74,22 @@ export function App() {
       .finally(() => { recoveryInFlight.current = false; });
   }, [activeSessionId, application, screen, snapshot, tick]);
 
-  const execute = async (operation: () => Promise<void>): Promise<void> => {
+  const execute = async (operation: () => Promise<void>): Promise<boolean> => {
     setBusy(true);
     setError(null);
     try {
       await operation();
       refresh();
+      return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '操作失败');
+      return false;
     } finally {
       setBusy(false);
     }
+  };
+  const executeCommand = async (operation: () => Promise<void>): Promise<void> => {
+    await execute(operation);
   };
 
   if (!snapshot) return <main className="loading" aria-live="polite">正在打开本地数据…</main>;
@@ -122,21 +127,28 @@ export function App() {
           <GoalsScreen
             snapshot={snapshot}
             busy={busy}
-            onCreate={(goal, activity) => execute(async () => {
+            onCreate={(goal, activity) => executeCommand(async () => {
               await application.createGoal(goal, activity);
               setNotice('目标和第一个活动已保存在本机。');
             })}
-            onUpdate={(goalId, goal, activityId, activity) => execute(async () => {
+            onUpdate={(goalId, goal, activityId, activity) => executeCommand(async () => {
               await application.updateGoal(goalId, goal, activityId, activity);
               setNotice('目标和活动已更新。');
             })}
-            onStatus={(id, status) => execute(() => application.setGoalStatus(id, status))}
-            onExport={() => execute(() => application.exportToFile())}
-            onImport={(contents) => execute(async () => {
-              await application.importData(contents);
+            onStatus={(id, status) => executeCommand(() => application.setGoalStatus(id, status))}
+            onExport={() => executeCommand(() => application.exportToFile())}
+            onPreviewImport={(contents) => application.previewImport(contents)}
+            onConfirmImport={(contents) => execute(async () => {
+              await application.confirmImport(contents);
+              const imported = application.getSnapshot();
+              const active = imported.sessions.find((session) => session.status === 'running' || session.status === 'paused');
+              const ended = imported.sessions.find((session) => session.status === 'ended');
+              setCurrentRunId(null);
+              setActiveSessionId(active?.id ?? ended?.id ?? null);
+              setScreen(active ? 'focus' : ended ? 'settlement' : 'goals');
               setNotice('导入完成，宠物进度已从奖励账本重建。');
             })}
-            onClear={() => execute(async () => {
+            onClear={() => executeCommand(async () => {
               if (!window.confirm('确定清空全部本地目标、专注、历史和奖励吗？此操作不能撤销。')) return;
               await application.clearAllData();
               setCurrentRunId(null);
@@ -150,16 +162,16 @@ export function App() {
             snapshot={snapshot}
             currentRun={currentRun}
             busy={busy}
-            onRoll={(availableMinutes, energy, contexts) => execute(async () => {
+            onRoll={(availableMinutes, energy, contexts) => executeCommand(async () => {
               const result = await application.roll({ availableMinutes, energy, contexts });
               setCurrentRunId(result.run.id);
               setNotice(result.emptyReason ? (EMPTY_REASON[result.emptyReason] ?? '当前没有合适候选。') : null);
             })}
-            onDismiss={(runId, activityId) => execute(async () => {
+            onDismiss={(runId, activityId) => executeCommand(async () => {
               await application.dismissRecommendation(runId, activityId);
               setNotice('已记录“暂不想做”，24 小时内会降低它的排序。');
             })}
-            onStart={(runId, activityId, mode, minutes) => execute(async () => {
+            onStart={(runId, activityId, mode, minutes) => executeCommand(async () => {
               const started = await application.startSession({ runId, activityId, timerMode: mode, plannedMinutes: minutes });
               setActiveSessionId(started.id);
               setScreen('focus');
@@ -175,9 +187,9 @@ export function App() {
             elapsedMinutes={application.getElapsedMinutes(session.id)}
             activityTitle={snapshot.activities.find((activity) => activity.id === session.activityTemplateId)?.title ?? '专注活动'}
             busy={busy}
-            onPause={() => execute(async () => { await application.pause(session.id); })}
-            onResume={() => execute(async () => { await application.resume(session.id); })}
-            onEnd={(action) => execute(async () => {
+            onPause={() => executeCommand(async () => { await application.pause(session.id); })}
+            onResume={() => executeCommand(async () => { await application.resume(session.id); })}
+            onEnd={(action) => executeCommand(async () => {
               await application.end(session.id, action);
               refresh();
               setScreen('settlement');
@@ -190,7 +202,7 @@ export function App() {
             session={session}
             goal={snapshot.goals.find((goal) => goal.id === session.goalId)}
             busy={busy}
-            onSettle={(draft) => execute(async () => {
+            onSettle={(draft) => executeCommand(async () => {
               const reward = await application.settle(session.id, draft);
               setNotice(`结算完成：+${reward.globalXpDelta} XP`);
               setActiveSessionId(null);
@@ -203,11 +215,11 @@ export function App() {
           <HistoryScreen
             snapshot={snapshot}
             busy={busy}
-            onUndo={(sessionId) => execute(async () => {
+            onUndo={(sessionId) => executeCommand(async () => {
               await application.undoSettlement(sessionId);
               setNotice('已撤销结算并写入反向奖励账目，历史记录仍保留。');
             })}
-            onNote={(sessionId, note) => execute(() => application.updateSessionNote(sessionId, note))}
+            onNote={(sessionId, note) => executeCommand(() => application.updateSessionNote(sessionId, note))}
           />
         )}
       </main>

@@ -198,3 +198,15 @@
 - 独立提交 `f1a8df9` 已推送；CI run `30929599851` 已通过环境、TypeScript/测试/网络/E2E 与 cap sync，正在组装 debug APK。确认最终绿灯前继续冻结 N1 远端提交。
 - CI run `30929599851` 最终全绿（3m11s）：debug APK 组装、merged manifest/哈希复核与 artifact 上传全部成功。N0 远端 Android 基线成立，解除 N1 远端提交冻结。
 - N1 W1/W2/W4 在固定 Node 24.14.0/npm 11.12.1 下重新通过 TypeScript、12 files/52 tests、50 产品文件/2 manifest 网络边界与 diff check；准备连同同步后的规划记录形成首个 N1 产品提交。
+- W3 核心实现开始：导入校验现接受严格 v1/v2 envelope，并对全部事实嵌套对象、Roll scoreParts 与 settings 执行 exact-key 校验；新增白名单导出/预览/安全恢复模块，下一步接入应用门面与确认 UI 后运行首轮类型测试。
+- W3 已接入应用门面与 GoalsScreen 两阶段状态：预览只返回数量/设置摘要并保留原字符串，显式确认才重新解析并提交；导出已切为 v2 白名单 envelope。下一步完成 App 壳层成功/失败路由、样式与专项测试。
+- App 壳层已区分普通命令与需要布尔成功结果的导入确认；确认成功后会清理旧 Roll/Session UI 指针并按导入快照路由到 Focus、Settlement 或 Goals。移动端预览卡片与覆盖警告样式已补齐，准备首轮类型检查。
+- W3 首轮类型检查只发现旧集成测试的直接导入 API 调用；改为预览/确认后，TypeScript 与既有 12 files/52 tests 全部通过。下一步新增 v1/v2、安全恢复、秘密/原型污染与失败原子性专项测试。
+- 已新增导入导出安全测试草案，覆盖 v1/v2、嵌套白名单、危险 settings 回退默认值、普通领域文本保留、秘密键与 `__proto__` 拒绝；继续补应用层 replace 次数与失败一致性测试后统一运行。
+- W3 专项测试已补齐并通过：TypeScript、14 files/59 tests。新增覆盖预览零写入、确认恰好一次 replace、v1 默认设置迁移、投影从账本重建、写入失败保持运行态/持久态、秘密与原型污染边界。
+- 进入 W3 里程碑 code-review/simplify：审查范围限定本轮导入校验、白名单导出、应用确认门面、Goals/App UI 与新增测试，优先检查数据覆盖、缓存信任、秘密透传及取消/失败状态。
+- W3 code-review 首轮发现 1 项 High：事实校验器返回原始行会让部分错误类型绕过 normalizer。当前暂停标记完成，先改为逐字段规范化返回并增加恶意字段类型回归测试。
+- High 修复已落盘：description、Roll energy、Session planned/running/target 字段、结算 rating 与 reversal 引用都新增严格类型/范围校验；结合 exact-key 约束后，原始深拷贝不再能携带未知键或已知键的错误类型。已补对象 description 与字符串 plannedMinutes 回归测试。
+- High 修复复审补齐 Goal/Activity rating 整数约束与 3.5 回归用例。simplify 检查确认白名单显式展开、预览/确认分层和 execute 布尔适配均承担安全边界，不做压缩式重构。
+- 浏览器闭环已更新为 v2 导出与两次同文件导入：首次预览后取消并断言旧状态不变，第二次预览后明确确认才恢复数据；同时断言导出包含默认非秘密 settings。
+- W3 终审无剩余代码发现，simplify 无额外改动；固定 Node 24 下 TypeScript、14 files/60 tests、53 产品文件/2 manifest 网络门槛、移动 Edge E2E、Vite production build、Android cap sync 与 diff check 全部通过。W3 标记完成，真实 Android 文件选择/SQLite 仍随 N1 原生门槛补证。

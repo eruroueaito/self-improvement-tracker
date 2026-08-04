@@ -22,16 +22,10 @@ import {
 } from '../modules/sessions/sessionMachine';
 import type { Session, SessionEndAction, SettlementDraft, TimerMode } from '../modules/sessions/types';
 import { createDefaultAppSettings, normalizeAppSettings, type AppSettings } from '../modules/settings/settings';
+import { buildExportEnvelope, summarizeImport, type ImportPreview } from './importExport';
 import { migrateSnapshot } from './migrations';
-import type { AppSnapshot, Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort, PersistedSnapshotV1 } from './ports';
+import type { AppSnapshot, Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort } from './ports';
 import { validateImportEnvelope } from './importValidation';
-
-interface ExportEnvelopeV1 {
-  format: 'self-improvement-tracker';
-  version: 1;
-  exportedAt: number;
-  data: Omit<PersistedSnapshotV1, 'schemaVersion'>;
-}
 
 export interface CreateGoalResult {
   goal: Goal;
@@ -373,21 +367,7 @@ export class MvpApplication {
   }
 
   exportData(): string {
-    const snapshot = this.current();
-    const envelope: ExportEnvelopeV1 = {
-      format: 'self-improvement-tracker',
-      version: 1,
-      exportedAt: this.clock.now(),
-      data: {
-        goals: snapshot.goals,
-        activities: snapshot.activities,
-        recommendationRuns: snapshot.recommendationRuns,
-        sessions: snapshot.sessions,
-        rewardEntries: snapshot.rewardEntries,
-        companionProjection: snapshot.companionProjection,
-      },
-    };
-    return JSON.stringify(envelope, null, 2);
+    return JSON.stringify(buildExportEnvelope(this.current(), this.clock.now()), null, 2);
   }
 
   async exportToFile(): Promise<void> {
@@ -395,25 +375,32 @@ export class MvpApplication {
     await this.exportFiles.save(this.exportData(), filename);
   }
 
-  async importData(serialized: string): Promise<void> {
+  private prepareImport(serialized: string): { sourceVersion: 1 | 2; snapshot: AppSnapshot } {
     let parsed: unknown;
     try {
       parsed = JSON.parse(serialized);
     } catch {
       throw new ValidationError('导入文件不是有效 JSON');
     }
-    const data = validateImportEnvelope(parsed);
-    const next: AppSnapshot = {
-      schemaVersion: 2,
-      goals: data.goals,
-      activities: data.activities,
-      recommendationRuns: data.recommendationRuns,
-      sessions: data.sessions,
-      rewardEntries: data.rewardEntries,
-      companionProjection: rebuildCompanionProjection(data.rewardEntries, this.clock.now()),
-      settings: createDefaultAppSettings(),
+    const validated = validateImportEnvelope(parsed);
+    const migrated = migrateSnapshot(validated.snapshot).snapshot;
+    return {
+      sourceVersion: validated.sourceVersion,
+      snapshot: {
+        ...migrated,
+        companionProjection: rebuildCompanionProjection(migrated.rewardEntries, this.clock.now()),
+      },
     };
-    await this.commit(next);
+  }
+
+  previewImport(serialized: string): ImportPreview {
+    const prepared = this.prepareImport(serialized);
+    return summarizeImport(prepared.sourceVersion, prepared.snapshot);
+  }
+
+  async confirmImport(serialized: string): Promise<void> {
+    const prepared = this.prepareImport(serialized);
+    await this.commit(prepared.snapshot);
   }
 
   async clearAllData(): Promise<void> {

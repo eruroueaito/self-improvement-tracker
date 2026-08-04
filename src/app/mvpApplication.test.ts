@@ -61,11 +61,14 @@ describe('MvpApplication offline loop', () => {
     const exported = app.exportData();
     const invalid = JSON.parse(exported);
     invalid.data.activities[0].goalId = 'missing-goal';
-    await expect(app.importData(JSON.stringify(invalid))).rejects.toThrow(/不存在的目标/);
+    expect(() => app.previewImport(JSON.stringify(invalid))).toThrow(/不存在的目标/);
     expect(app.getSnapshot().goals[0]?.title).toBe('阅读计划');
     await app.clearAllData();
     expect(app.getSnapshot().goals).toHaveLength(0);
-    await app.importData(exported);
+    const preview = app.previewImport(exported);
+    expect(preview).toMatchObject({ sourceVersion: 2, goalCount: 1, activityCount: 1, sessionCount: 1, rewardCount: 2 });
+    expect(app.getSnapshot().goals).toHaveLength(0);
+    await app.confirmImport(exported);
     expect(app.getSnapshot().goals[0]?.title).toBe('阅读计划');
     expect(app.getSnapshot().sessions[0]?.status).toBe('voided');
     expect(app.getSnapshot().companionProjection.globalXp).toBe(0);

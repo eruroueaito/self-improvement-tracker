@@ -37,7 +37,7 @@
 - [x] W1：实现版本化快照、AppSettings 与纯 v1→v2 迁移器
 - [x] W2：迁移应用初始化及 Memory/localStorage 原子契约
 - [x] W4：实现 SQLite 双版本状态机、事务写入与失败注入（52 项本地测试通过；真实 Android 旧库证据仍属于 N1 最终门槛）
-- [ ] W3：实现 v1/v2 导入预览、确认、v2 导出与安全恢复导出
+- [x] W3：实现 v1/v2 导入预览、确认、v2 导出与安全恢复导出（14 files/60 tests、E2E、build/cap sync 已通过）
 - [ ] W5：实现设置 UI 与 N1 端到端验收
 - [ ] W6：执行 code-review、simplify、完整验证与选择性提交
 - [ ] 实现版本化迁移、AppSettings、事务失败回滚和导入导出 v2
@@ -227,3 +227,6 @@
 | 修复上下文后 CI 在 setup-java 失败：`21.0.6+7` 不匹配 Temurin 的完整 SemVer | 1 | 按 action 返回的可用版本改为 `21.0.6+7.0.LTS`；同步升级官方 action 当前主版本，并限制 feature push 不重复触发 CI |
 | 同一补丁尝试同时更新 findings/progress 时使用了不属于 findings 的上下文行 | 1 | 补丁被原子拒绝且未产生修改；分别读取两文件尾部后，以各自真实末行作为独立上下文重试 |
 | 默认终端直接运行 N0 环境检测时命中系统 Node 25 且未注入 Android SDK 根目录 | 1 | 该结果是本机 shell 未选择仓库固定工具链，不是 wrapper mode 回归；按既有 N0 方式前置 `.tools` Node 24/npm 并注入 `D:\Android\Sdk` 后复验 |
+| W3 首轮类型检查仍有两处集成测试调用已移除的直接 `importData` | 1 | 产品代码类型通过到测试边界；把旧测试改为 `previewImport` 无写入断言与 `confirmImport` 显式提交，不保留绕过确认语义的兼容入口 |
+| 同一补丁在测试 hunk 末尾遗留空 `@@`，导致后续 task_plan 更新被解析为 hunk 内容 | 1 | apply_patch 原子拒绝且未产生修改；拆成两个各自完整的补丁后成功更新测试与错误记录 |
+| 更新 E2E 与 progress 的组合补丁再次在文件切换前遗留空 `@@` | 1 | apply_patch 原子拒绝且未修改文件；先单独应用完整 E2E hunk，再以真实末行上下文更新规划文件 |
