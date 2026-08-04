@@ -122,3 +122,14 @@
 - `npm audit --omit=dev` 为 0；完整 audit 的 3 个 moderate 都位于 Capacitor CLI → xcode → uuid 的开发期 iOS 解析链，不进入 Android 运行时包。
 - Gradle wrapper 两次有限下载均未获得任何分发包字节，且本机没有完整 Android SDK；APK 构建不能声称通过。Android 工程生成、四插件识别与 cap sync 已独立通过。
 - 初次超时安装产生的可重建损坏 node_modules/lockfile 已清理；源码、文档和本地产品数据未删除。
+
+## Post-MVP 路线差距（2026-08-04）
+
+- 基础 MVP 已在 `998d494` 完成；后续计划必须把该提交视为基线，不重复 Goals、确定性 Roll、Session、手动结算、RewardLedger、静态伙伴、History 和导入导出。
+- 当前最高优先级风险不是新功能，而是 Android 原生证据缺口：尚未完成 `assembleDebug`、安装到模拟器/真机、SQLite 冷启动恢复、通知权限拒绝、后台/强杀恢复和系统文件分享的原生冒烟验证。
+- 当前 `AppSnapshot.schemaVersion` 固定为 1，`DataStore` 只有整包 `load/replace`；进入 AppSettings、AI 调用历史、伙伴状态和更多活动管理前，必须先建立可回滚迁移与 SQLite 契约测试门槛。
+- 当前代码没有 `ProviderAdapter`、`SecretStore`、`SettingsStore`、GoalDraft/SettlementDraft Schema 或 AI 历史；这些应作为独立 AI 基础阶段加入，不能塞进现有 UI 或领域引擎。
+- 当前伙伴只是 `CompanionProjection` 加 emoji 展示；三阶段像素素材、四种正向状态、活动状态计算、解锁物品和无动画降级仍未实现。
+- 当前已具备 `prefers-reduced-motion` 基础样式和语义标签，但深色模式、系统字体缩放矩阵、屏幕阅读器验收、触觉反馈开关、通知设置与系统输入法语音说明仍缺失。
+- 原始八阶段顺序需要按现状重排：原生发布门槛先行，随后补齐离线产品/数据可靠性，再做完整伙伴，之后依次接入 GoalDraft 和 SettlementDraft；AI 的 Roll 文案润色是可选项且不得改变本地候选 ID 或顺序。
+- whisper.cpp 从 v1 关键路径移除，只保留发布后的独立 RFC；iOS 适配在 Android v1 达标后启动。

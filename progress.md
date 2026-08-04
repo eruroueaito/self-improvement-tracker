@@ -2,6 +2,8 @@
 
 ## 2026-08-04
 
+- 用户要求详细整理基本 MVP 之后的开发计划；已执行 MemSkill recall 和 planning-with-files session catchup，确认从已完成提交 `998d494` 向后规划，不重做 MVP。
+
 - 已执行 MemSkill recall；未发现与本项目直接相关的既有记忆。
 - 已读取 `brainstorming` 与 `planning-with-files` 工作流。
 - 已完成文件化计划初始化。
@@ -60,3 +62,12 @@
 
 - 设计审批门槛：生效。
 - 产品代码变更：无。
+
+## 2026-08-04 Post-MVP 路线规划
+
+- 用户要求在已确认的方案 B 和二次结构审查基础上，详细整理下一阶段开发计划。
+- 已执行 MemSkill recall 与 planning-with-files 会话恢复，确认从基础 MVP 提交 `998d494` 继续。
+- 已逐项对齐原始八阶段要求、二次结构审查结论和当前源码拓扑；确认首个后续里程碑必须关闭 Android APK/真机证据缺口。
+- 已确认后续主要缺口：可回滚迁移与 AppSettings、完整 ActivityTemplate/Goal 详情体验、真实伙伴状态、AI Provider/SecretStore/Schema、可访问性/隐私/发布硬化、iOS 适配；whisper.cpp 延后到发布后 RFC。
+- 已创建 `docs/plans/2026-08-04-post-mvp-roadmap.md`：包含 N0–N7、发布后 E1、关键依赖、共同门槛、工作包、测试、退出标准、立即执行清单和明确不做项。
+- 已完成结构检查：9 个阶段章节、依赖顺序一致、代码围栏成对；本轮仅修改计划与研究文档，未修改产品代码，因此不重复运行产品测试。
