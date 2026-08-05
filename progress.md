@@ -268,3 +268,6 @@
 - N3 brainstorming 在用户自动决策授权下完成方案收敛：采用无第三方/无二进制的原创 CSS 像素伙伴，ActivityState 只驱动正向视觉氛围，不进入 Roll。已写入 `docs/superpowers/specs/2026-08-05-n3-companion-activity-state-design.md`，下一步执行独立自动规格审查。
 - N3 规格首轮独立审查状态为 Issues Found：2 项事实/兼容边界、2 项时间/撤销因果、1 项不可证伪公平性、1 项 settings 联合类型冲突和 1 项 production CSS/Android 验收缺口。已逐项修订为无 schema 变更的兼容规则、确定账本顺序、撤销即时取消庆祝、精确 UTC 窗口、冻结 30 天阈值与 production computed-style 矩阵；进入第二轮自动审查。
 - N3 规格第二轮独立审查状态为 Approved，无问题；设计冻结完成。下一步按 planning-with-files 回退写逐文件实施计划并独立自动复核，真实 Android 视觉继续标记 `native evidence pending`。
+- 已写入 `docs/plans/2026-08-05-n3-companion-activity-state-implementation.md`：五个线性工作包覆盖共享完成判定/ActivityState/账本重放、CompanionView、公平性、CSS UI、production/Android 与最终 CI。30 天临时探针确认现有 Roll 可满足冻结阈值且未留下测试文件；准备独立计划审查。
+- N3 计划首轮独立审查状态为 Issues Found：缺 future reversal 生效时间测试，最终 CI 与完成状态未严格绑定同一不可变 PR revision。已补未来账目边界，并把 W5 改为候选 exact-head CI 与最终状态 exact-head CI 两次核对；进入第二轮计划审查。
+- N3 计划第二轮独立审查状态为 Approved，无问题或建议；规格与逐文件计划均已冻结，开始 W1 红灯测试。

@@ -285,3 +285,7 @@
 - 修订后的硬规则是：旧 `CompanionProjection.mood` 永久固定为可忽略的 `idle` 兼容缓存；账本采用 createdAt → settlement/reversal → ID 规范序并拒绝反向时间因果；7/14 日闭区间精确为 D-6…D 与 D-13…D；30 天闭环仿真冻结输入、首选序列、占比和连续上限。
 - 为验证实际 CSS 而非只验证 class，production preview 增加无导航/无写入的 query 验收面，Playwright 对真实 3×4 组件矩阵读取 computed style，并分别验证设置 reduced/none 与系统 prefers-reduced-motion；真实 Android 视觉仍单列 pending 到 N7 总审计。
 - N3 规格第二轮独立审查已批准，首轮七项修订全部关闭且没有新问题；这些规则必须原样进入逐文件计划，不能在实施中用旧持久 mood、`full` motion 或名义 class 测试替代。
+- 固定 30 天 Roll 闭环已用临时只读测试探针验证现有 v1 规则无需修改：首选序列统计为 study 15、fitness 13、photo 2，单项最高 50%，最大连续 1 天，且摄影暂停窗口不入选；探针文件已删除，正式计划冻结精确序列与阈值回归。
+- N3 计划按五包拆分为领域引擎、运行时 selector、公平性、CSS/DOM UI、production/Android 验收与阶段收口；系统时钟回拨时 reversal 时间必须钳制到原 settlement 时间，避免应用生成自身导入器会拒绝的因果非法账本。
+- N3 计划首轮自动审查补出两个边界：future reversal 不能提前取消仍在 2 秒窗口内的 settlement 庆祝；远端收口必须锁定 PR headRefOid/event/run headSha/artifact 的同一不可变 revision，不能复用旧产品 SHA 的成功记录。
+- N3 计划第二轮独立审查已批准，无问题或建议；设计与执行门槛关闭，按 W1 测试先行进入共享完成判定、ActivityState v1 和规范奖励重放。
