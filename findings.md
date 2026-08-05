@@ -278,3 +278,6 @@
 - N2 production 边界不能由 `import.meta.env.DEV` 源码条件单独证明；必须用真实 build 后的 `vite preview` 遍历公开导航并观察可访问名称与持久事实。开发服务器 E2E 即使隐藏按钮，也不能替代 production artifact 证据。
 - N2/W6 完整 diff 审查发现归档 Activity 的编辑表单若统一渲染在 active 区，会在移动端出现在当前视口上方，让点击看似无响应；编辑器必须跟随 active/archived 分组就地渲染。
 - N2 最终远端证据链已成立：PR pull_request run 必须与产品代码 head SHA 匹配，并同时通过 production E2E、Android APK 组装、manifest/哈希复核和 artifact 上传；branch push 或仅本地 build 都不能替代这条链。
+- N3 自动方案采用原创 CSS/DOM 像素伙伴，不使用 PNG 生成或第三方素材：同一骨架组合 3 阶段 × 4 状态，最易保证一致性、MIT 归属、production 离线和 reduced-motion。
+- N3 明确不把 ActivityState/伙伴投影接入 Roll。路线中的可选表述与“伙伴不得反向控制/产生 Roll 偏置”的退出标准冲突时，以后者为硬边界；公平性缺陷只能在独立 Roll 规则中修复。
+- ActivityState v1 采用 7 日 active-day 去重（最多 70）+ 14 日不同 Goal breadth（最多 30），避免 rewardWeight、同日刷短任务或单目标重复直接放大视觉状态；分数不以能力或健康度展示。
