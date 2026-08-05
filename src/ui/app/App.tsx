@@ -6,17 +6,18 @@
  * 注意事项：UI 不直接访问数据库；跨模块状态只通过应用门面改变
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { selectCompanionRefreshDelay, selectCompanionView } from '../../app/companionSelectors';
 import { createMvpApplication } from '../../app/composition';
 import { hasDevelopmentSeedFacts } from '../../app/developmentSeed';
 import type { AppSnapshot } from '../../app/ports';
 import type { EmptyRollReason } from '../../modules/recommendations/types';
+import { CompanionAvatar } from '../companion/CompanionAvatar';
 import { FocusScreen } from '../focus/FocusScreen';
 import { GoalDetailScreen } from '../goals/GoalDetailScreen';
 import { GoalsScreen } from '../goals/GoalsScreen';
 import { HistoryScreen } from '../history/HistoryScreen';
 import { RollScreen } from '../roll/RollScreen';
 import { SettlementScreen } from '../settlement/SettlementScreen';
-import { companionEmoji } from '../shared/presentation';
 import { RecoveryScreen } from './RecoveryScreen';
 
 type Tab = 'goals' | 'roll' | 'history';
@@ -43,6 +44,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [tick, setTick] = useState(0);
+  const [, setCompanionTick] = useState(0);
   const recoveryInFlight = useRef(false);
   const commandInFlight = useRef(false);
 
@@ -96,6 +98,18 @@ export function App() {
     setSelectedGoalId(null);
     if (screen === 'goal-detail') setScreen('goals');
   }, [screen, selectedGoalId, snapshot]);
+
+  const companionNow = Date.now();
+  const companionView = snapshot
+    ? selectCompanionView(snapshot, { now: companionNow, localHour: new Date(companionNow).getHours() })
+    : null;
+  const companionRefreshDelay = selectCompanionRefreshDelay(companionView?.celebratingUntil ?? null, companionNow);
+
+  useEffect(() => {
+    if (companionRefreshDelay === null) return;
+    const timeoutId = window.setTimeout(() => setCompanionTick((value) => value + 1), companionRefreshDelay);
+    return () => window.clearTimeout(timeoutId);
+  }, [companionRefreshDelay, companionView?.celebratingUntil]);
 
   const execute = async (operation: () => Promise<void>): Promise<boolean> => {
     if (commandInFlight.current) return false;
@@ -160,10 +174,14 @@ export function App() {
           <p className="eyebrow">SELF IMPROVEMENT TRACKER</p>
           <h1>{screen === 'focus' ? '专注' : screen === 'settlement' ? '结算' : screen === 'goal-detail' ? '目标详情' : screen === 'goals' ? '目标' : screen === 'history' ? '历史' : '现在做什么？'}</h1>
         </div>
-        <div className="companion" aria-label={`伙伴等级 ${snapshot.companionProjection.level}，${snapshot.companionProjection.globalXp} XP`}>
-          <span aria-hidden="true">{companionEmoji(snapshot.companionProjection.evolutionStage)}</span>
-          <b>Lv.{snapshot.companionProjection.level}</b>
-          <small>{snapshot.companionProjection.globalXp} XP</small>
+        <div className="companion-summary">
+          <CompanionAvatar
+            stage={companionView!.projection.evolutionStage}
+            mood={companionView!.mood}
+            size="compact"
+            motion={snapshot.settings.motion}
+          />
+          <span className="companion-level"><b>Lv.{companionView!.projection.level}</b><small>{companionView!.projection.currentXp} XP</small></span>
         </div>
       </header>
 
@@ -269,6 +287,7 @@ export function App() {
         {screen === 'roll' && (
           <RollScreen
             snapshot={snapshot}
+            companionView={companionView!}
             currentRun={currentRun}
             busy={busy}
             onRoll={(availableMinutes, energy, contexts) => executeCommand(async () => {

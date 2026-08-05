@@ -295,3 +295,6 @@
 - W2 阶段审查发现规格自身的 2000ms 闭区间与 UI 定时器存在等号矛盾；首个 `>= + setTimeout(0)` 修订又会在冻结时钟下重复调度。最终收敛为 `(now-2000, now]` 半开窗口与 `until > now` 单次定时器：恰好 2 秒确定退出，无 UI 第二事实或轮询。
 - W2 selector 始终从 RewardLedger/Session 重建，恶意持久 projection 的 999 XP/celebrating 值不会进入视图；unlock 精确覆盖 50/150/300，future reversal 到生效时间前不取消庆祝，working 优先于其他 mood。
 - 固定 30 天正式回归冻结逐日首选序列与 study=15/fitness=13/photo=2 汇总；selector 前后 RollResult 字节等价，伙伴模块没有进入 RollEngine API。simplify 只提取正延时 refresh-delay 纯函数，避免 W3 复制边界判断。
+- W3 的原创伙伴使用单一 13-part DOM 骨架和本地 CSS 变量组合 3 阶段×4 状态；production query 矩阵不初始化 MvpApplication/Store，资产登记明确 MIT、无图片/sprite/Canvas/第三方或远程来源。
+- W3 code-review 发现 1 项 Medium：reduced/none 原先只关闭 `data-part` 节点动画，眨眼实际挂在眼睛子节点而会漏动；关闭规则已扩展到伙伴全部后代与伪元素，等待 W4 computed-style 锁定。
+- 真实 390×844 Edge production 视觉审查确认 hero/顶栏/底部导航不重叠；并修复 2 项 Low：顶栏 `0 XP` 窄屏换行、空活动状态重复“安静陪伴”。最终截图保存在忽略目录 `output/playwright/` 作为本地证据。

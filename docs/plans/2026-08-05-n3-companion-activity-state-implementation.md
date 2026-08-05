@@ -122,6 +122,8 @@ npm run test:run
 
 ### W3：原创 CSS 伙伴、页面接线与一次性庆祝
 
+> 实施状态：完成；code-review 修复 1 项 Medium reduced-motion 后代动画泄漏，visual review 修复 2 项 Low 可读性问题，simplify 完成，TypeScript、21 files/122 tests、8 dev E2E、build 与网络边界通过
+
 改动文件：
 
 - 新增 `src/ui/companion/CompanionAvatar.tsx`

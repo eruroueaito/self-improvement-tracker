@@ -277,3 +277,6 @@
 - W2 时间边界首次复核发现 `setTimeout(0)` 在冻结时钟下可能重复；现改为半开 2 秒窗口，2,999ms 仍庆祝、2,000ms 精确退出，并恢复严格正延时的一次性 timer。等待第二轮快速复核。
 - W2 时间修订第二轮独立复核 Approved；新增纯 refresh-delay selector，在冻结 now==deadline 时重复调用均返回 null，为 W3 App effect 提供同一已测试边界。
 - N3/W2 收口通过：unlock 阈值、四 mood 优先级/小时边界、future settlement/reversal、即时 reversal、2 秒半开窗口、冻结 deadline、输入不变、Roll 字节不变与 30 天公平性均覆盖。code-review 的 1 项 Medium 已经独立规格复核关闭；TypeScript、20 files/105 tests 与 diff check 全绿。
+- N3/W3 组件红灯后完成原创 `CompanionAvatar`、无写入 query matrix、App 一次性刷新、compact 顶栏、expanded Roll hero、三件 room unlock 和资产登记；3×4/三 motion 组件矩阵 17 项断言通过。
+- W3 code-review 修复 1 项 Medium reduced-motion 子节点动画泄漏；simplify 合并重复正向状态文案。固定 Node 下 TypeScript、21 files/122 tests、production build、74 产品文件/2 manifest 网络边界与既有 8 条移动 Edge E2E 全绿。
+- 按 Playwright skill 用真实 production preview 检查完整矩阵和 390×844 Roll 首屏；伙伴形态可区分、无远程请求迹象、导航命中区域未被装饰遮挡，2 项窄屏文字问题修复后复截图通过。进入 W4 可重复 production computed-style 与 N3 流程 E2E。
