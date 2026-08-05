@@ -52,7 +52,7 @@
 - [x] 写入并通过两轮自动复核 N2 详细实施计划（第一轮修订，第二轮批准）
 - [x] W1：独立 Goal/Activity 命令与 Roll 空原因
 - [x] W2：Goal Catalog/详情只读 selectors
-- [ ] W3：紧凑 Catalog、Goal 详情与多 Activity UI
+- [x] W3：紧凑 Catalog、Goal 详情与多 Activity UI
 - [ ] W4：确定性开发种子与安全清理
 - [ ] W5–W6：E2E、production 边界、审查、简化与完整证据
 - [ ] Goal 详情、多 ActivityTemplate 管理、反馈模型展示和开发种子模式
@@ -177,6 +177,9 @@
 |---|---:|---|
 | N2 实施计划两行 Markdown 尾随空格令 `git diff --cached --check` 非零，但 PowerShell 顺序命令仍继续创建了本地 commit | 1 | 改成空引用行格式、重新运行 check，并 amend 尚未推送的提交；后续把检查与提交分开调用 |
 | W2 最近记录把 Goal 条件与 Settlement 类型谓词合在同一 `filter` 后，TypeScript 未保留非空字段收窄 | 1 | 拆为先执行类型谓词、再按 Goal 过滤的两步链，保持运行逻辑不变并让后续排序/映射获得严格类型 |
+| W3 E2E 用非精确按钮名“目标”时同时匹配详情页的编辑/状态/历史按钮 | 1 | 将底部导航的 Goal/Roll 定位改为 `exact: true`；此前交互已通过到最后活动归档提示，不修改产品行为 |
+| W3 E2E 在未展开“已归档活动”折叠区时直接点击隐藏的恢复按钮并超时 | 1 | 先通过可见 summary 展开归档区再定位恢复动作，保持规格中的信息层级不变 |
+| W3 全量 E2E 中旧 MVP 流程直接操作已迁入“高级设置”的重要性字段并超时 | 1 | 更新旧验收先展开高级设置；N2 新流程和初始化恢复用例已通过，不回退新信息层级 |
 | 用 PowerShell `foreach` 的语句结果直接接管道检查 `writing-plans` 路径时触发 `An empty pipe element is not allowed` | 1 | 改为在循环内逐行 `Write-Output`；确认两个候选路径均不存在，不再重复原命令 |
 | 按默认 `.codex/skills` 路径运行 `session-catchup.py` 时文件不存在 | 1 | 用 `rg --files` 定位到 `.agents/skills/planning-with-files/planning-with-files/scripts/` 后成功运行 |
 | 用 `rg --files` 查找现有计划/说明文件返回退出码 1 | 1 | 解释为当前空目录中无匹配文件，不重复执行 |

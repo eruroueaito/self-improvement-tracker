@@ -10,6 +10,7 @@ import { createMvpApplication } from '../../app/composition';
 import type { AppSnapshot } from '../../app/ports';
 import type { EmptyRollReason } from '../../modules/recommendations/types';
 import { FocusScreen } from '../focus/FocusScreen';
+import { GoalDetailScreen } from '../goals/GoalDetailScreen';
 import { GoalsScreen } from '../goals/GoalsScreen';
 import { HistoryScreen } from '../history/HistoryScreen';
 import { RollScreen } from '../roll/RollScreen';
@@ -18,7 +19,7 @@ import { companionEmoji } from '../shared/presentation';
 import { RecoveryScreen } from './RecoveryScreen';
 
 type Tab = 'goals' | 'roll' | 'history';
-type Screen = Tab | 'focus' | 'settlement';
+type Screen = Tab | 'goal-detail' | 'focus' | 'settlement';
 
 const EMPTY_REASON: Record<EmptyRollReason, string> = {
   'no-active-goals': '先创建并启用一个目标与活动。',
@@ -34,12 +35,15 @@ export function App() {
   const [screen, setScreen] = useState<Screen>('roll');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [initialHistoryGoalId, setInitialHistoryGoalId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [tick, setTick] = useState(0);
   const recoveryInFlight = useRef(false);
+  const commandInFlight = useRef(false);
 
   const refresh = (): void => setSnapshot(application.getSnapshot());
 
@@ -53,6 +57,8 @@ export function App() {
       const ended = initial.sessions.find((session) => session.status === 'ended');
       setActiveSessionId(active?.id ?? ended?.id ?? null);
       setCurrentRunId(null);
+      setSelectedGoalId(null);
+      setInitialHistoryGoalId(null);
       setScreen(active ? 'focus' : ended ? 'settlement' : 'roll');
     } catch (cause) {
       setSnapshot(null);
@@ -84,7 +90,15 @@ export function App() {
       .finally(() => { recoveryInFlight.current = false; });
   }, [activeSessionId, application, screen, snapshot, tick]);
 
+  useEffect(() => {
+    if (!snapshot || !selectedGoalId || snapshot.goals.some((goal) => goal.id === selectedGoalId)) return;
+    setSelectedGoalId(null);
+    if (screen === 'goal-detail') setScreen('goals');
+  }, [screen, selectedGoalId, snapshot]);
+
   const execute = async (operation: () => Promise<void>): Promise<boolean> => {
+    if (commandInFlight.current) return false;
+    commandInFlight.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -95,6 +109,7 @@ export function App() {
       setError(cause instanceof Error ? cause.message : '操作失败');
       return false;
     } finally {
+      commandInFlight.current = false;
       setBusy(false);
     }
   };
@@ -131,6 +146,8 @@ export function App() {
     ? snapshot.sessions.find((candidate) => candidate.id === activeSessionId) ?? null
     : null;
   const navigate = (tab: Tab): void => {
+    setSelectedGoalId(null);
+    if (tab === 'history') setInitialHistoryGoalId(null);
     setScreen(tab);
     setError(null);
   };
@@ -140,7 +157,7 @@ export function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">SELF IMPROVEMENT TRACKER</p>
-          <h1>{screen === 'focus' ? '专注' : screen === 'settlement' ? '结算' : screen === 'goals' ? '目标' : screen === 'history' ? '历史' : '现在做什么？'}</h1>
+          <h1>{screen === 'focus' ? '专注' : screen === 'settlement' ? '结算' : screen === 'goal-detail' ? '目标详情' : screen === 'goals' ? '目标' : screen === 'history' ? '历史' : '现在做什么？'}</h1>
         </div>
         <div className="companion" aria-label={`伙伴等级 ${snapshot.companionProjection.level}，${snapshot.companionProjection.globalXp} XP`}>
           <span aria-hidden="true">{companionEmoji(snapshot.companionProjection.evolutionStage)}</span>
@@ -157,15 +174,15 @@ export function App() {
           <GoalsScreen
             snapshot={snapshot}
             busy={busy}
-            onCreate={(goal, activity) => executeCommand(async () => {
+            onCreate={(goal, activity) => execute(async () => {
               await application.createGoal(goal, activity);
               setNotice('目标和第一个活动已保存在本机。');
             })}
-            onUpdate={(goalId, goal, activityId, activity) => executeCommand(async () => {
-              await application.updateGoalAndActivity(goalId, goal, activityId, activity);
-              setNotice('目标和活动已更新。');
-            })}
-            onStatus={(id, status) => executeCommand(() => application.setGoalStatus(id, status))}
+            onOpenGoal={(goalId) => {
+              setSelectedGoalId(goalId);
+              setScreen('goal-detail');
+              setError(null);
+            }}
             onExport={() => executeCommand(() => application.exportToFile())}
             onPreviewImport={(contents) => application.previewImport(contents)}
             onConfirmImport={(contents) => execute(async () => {
@@ -175,6 +192,8 @@ export function App() {
               const ended = imported.sessions.find((session) => session.status === 'ended');
               setCurrentRunId(null);
               setActiveSessionId(active?.id ?? ended?.id ?? null);
+              setSelectedGoalId(null);
+              setInitialHistoryGoalId(null);
               setScreen(active ? 'focus' : ended ? 'settlement' : 'goals');
               setNotice('导入完成，宠物进度已从奖励账本重建。');
             })}
@@ -186,8 +205,51 @@ export function App() {
               if (!window.confirm('确定清空全部本地目标、专注、历史和奖励吗？此操作不能撤销。')) return;
               await application.clearAllData();
               setCurrentRunId(null);
+              setSelectedGoalId(null);
+              setInitialHistoryGoalId(null);
+              setScreen('goals');
               setNotice('全部本地数据已清空。');
             })}
+          />
+        )}
+
+        {screen === 'goal-detail' && selectedGoalId && (
+          <GoalDetailScreen
+            snapshot={snapshot}
+            goalId={selectedGoalId}
+            busy={busy}
+            onBack={() => {
+              setSelectedGoalId(null);
+              setScreen('goals');
+            }}
+            onUpdateGoal={(goalId, draft) => execute(async () => {
+              await application.updateGoal(goalId, draft);
+              setNotice('目标已更新。');
+            })}
+            onStatus={(goalId, status) => executeCommand(async () => {
+              await application.setGoalStatus(goalId, status);
+              setNotice('目标状态已更新。');
+            })}
+            onCreateActivity={(goalId, draft) => execute(async () => {
+              await application.createActivity(goalId, draft);
+              setNotice('活动已添加。');
+            })}
+            onUpdateActivity={(goalId, activityId, draft) => execute(async () => {
+              await application.updateActivity(goalId, activityId, draft);
+              setNotice('活动已更新。');
+            })}
+            onArchiveActivity={(goalId, activityId) => executeCommand(async () => {
+              await application.archiveActivity(goalId, activityId);
+              setNotice('活动已归档，可随时恢复。');
+            })}
+            onRestoreActivity={(goalId, activityId) => executeCommand(async () => {
+              await application.restoreActivity(goalId, activityId);
+              setNotice('活动已恢复并可参与 Roll。');
+            })}
+            onOpenHistory={(goalId) => {
+              setInitialHistoryGoalId(goalId);
+              setScreen('history');
+            }}
           />
         )}
 
@@ -247,8 +309,10 @@ export function App() {
 
         {screen === 'history' && (
           <HistoryScreen
+            key={initialHistoryGoalId ?? 'all'}
             snapshot={snapshot}
             busy={busy}
+            initialGoalId={initialHistoryGoalId}
             onUndo={(sessionId) => executeCommand(async () => {
               await application.undoSettlement(sessionId);
               setNotice('已撤销结算并写入反向奖励账目，历史记录仍保留。');
@@ -258,9 +322,9 @@ export function App() {
         )}
       </main>
 
-      {(screen === 'goals' || screen === 'roll' || screen === 'history') && (
+      {(screen === 'goals' || screen === 'goal-detail' || screen === 'roll' || screen === 'history') && (
         <nav className="bottom-nav" aria-label="主导航">
-          <button className={screen === 'goals' ? 'active' : ''} onClick={() => navigate('goals')}>目标</button>
+          <button className={screen === 'goals' || screen === 'goal-detail' ? 'active' : ''} onClick={() => navigate('goals')}>目标</button>
           <button className={screen === 'roll' ? 'active primary-tab' : 'primary-tab'} onClick={() => navigate('roll')}>Roll</button>
           <button className={screen === 'history' ? 'active' : ''} onClick={() => navigate('history')}>历史</button>
         </nav>

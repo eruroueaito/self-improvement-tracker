@@ -21,6 +21,7 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
   await page.getByRole('button', { name: '目标' }).click();
   await page.getByLabel('目标名称').fill('阅读');
   await page.getByLabel('第一个活动').fill('读十页');
+  await page.getByText('高级设置').click();
   await page.getByLabel('重要性').selectOption('4');
   await page.getByLabel('精力消耗').selectOption('2');
   await page.getByRole('button', { name: '保存到本机' }).click();

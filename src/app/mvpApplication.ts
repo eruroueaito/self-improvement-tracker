@@ -217,42 +217,6 @@ export class MvpApplication {
     await this.commit(next);
   }
 
-  async updateGoalAndActivity(
-    goalId: string,
-    goalDraft: GoalDraft,
-    activityId: string,
-    activityDraft: ActivityDraft,
-  ): Promise<void> {
-    const normalizedGoal = normalizeGoalDraft(goalDraft);
-    const normalizedActivity = normalizeActivityDraft(activityDraft);
-    const next = this.getSnapshot();
-    const goal = next.goals.find((candidate) => candidate.id === goalId);
-    const activity = next.activities.find((candidate) => candidate.id === activityId && candidate.goalId === goalId);
-    if (!goal || !activity) throw new ValidationError('要编辑的目标或活动不存在');
-    Object.assign(goal, {
-      title: normalizedGoal.title,
-      description: normalizedGoal.description ?? '',
-      importance: normalizedGoal.importance,
-      feedback: normalizedGoal.feedback,
-      desiredCadenceDays: normalizedGoal.desiredCadenceDays ?? null,
-      minimumRestHours: normalizedGoal.minimumRestHours ?? 0,
-      defaultEnergyCost: normalizedGoal.defaultEnergyCost,
-      updatedAt: this.clock.now(),
-    });
-    Object.assign(activity, {
-      title: normalizedActivity.title,
-      description: normalizedActivity.description ?? '',
-      minimumMinutes: normalizedActivity.minimumMinutes,
-      maximumMinutes: normalizedActivity.maximumMinutes,
-      energyCost: normalizedActivity.energyCost,
-      contexts: normalizedActivity.contexts ?? [],
-      minimumRestHours: normalizedActivity.minimumRestHours ?? null,
-      suggestedCadenceDays: normalizedActivity.suggestedCadenceDays ?? null,
-      rewardWeight: normalizedActivity.rewardWeight ?? 1,
-    });
-    await this.commit(next);
-  }
-
   async roll(context: RollContext): Promise<RollResult> {
     const snapshot = this.current();
     const result = runRollEngine({

@@ -250,3 +250,7 @@
 - N2/W2 已先建立 5 组 selector 红灯测试，首轮 5/5 预期失败，覆盖四种反馈结算/撤销、baseline-relative ratio、Catalog needsActivity、活动稳定分组、最近五条与输入不变性；随后补入窄视图与纯派生实现，待专项类型/测试验证。
 - N2/W2 code-review 发现 1 项 Medium 测试缺口：未覆盖 interrupted/abandoned 在 progress、累计次数、累计分钟中的差异；已补反例。simplify 将重复 Settlement 构造收敛为显式 fixture，产品 selector 保持窄函数和纯派生结构。
 - N2/W2 收口通过：反馈视图现包含 type/baseline/value/target/unit/ratio，Catalog 派生活动计数与 needsActivity，详情稳定分组 active/archived Activities 并返回最多五条 settled/voided 记录；TypeScript、专项 5/5、全量 16 files/74 tests 与 diff check 全绿。
+- N2/W3 第一轮 UI 已落盘：旧联合表单拆为 GoalForm、ActivityForm、GoalFeedbackCard、GoalDetailScreen 与紧凑 Catalog；App 增加 goal-detail/History 上下文、同步 commandInFlight 防重锁和独立命令接线，临时联合 API 已删除且 `rg` 无引用。
+- W3 浏览器红灯最初在旧 Catalog 缺失活动计数处失败；新 UI 后通过真实移动 Edge 的双击创建、写失败保留输入并重试、多 Activity 编辑、归档最后活动、Catalog/Roll 修复提示、恢复与 History 初始筛选全链，1/1 通过且无外网请求。
+- N2/W3 code-review 发现 1 项 Medium 验收缺口：写失败后未直接证明持久快照无半提交；已增加详情无新卡片与 localStorage activities 数量不变断言。simplify 把 Activity 编辑器的三态哨兵替换为显式对象状态，保持新增/编辑/关闭行为不变。
+- N2/W3 收口通过：固定 Node 24 下 TypeScript、16 files/74 tests、3 条移动 Edge E2E、61 产品文件/2 manifest 网络边界、production build、Android cap sync 与 diff check 全绿；临时联合 API 已彻底删除，阶段审查无剩余 High/Medium。

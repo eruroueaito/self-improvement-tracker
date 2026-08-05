@@ -271,3 +271,5 @@
 - N2/W1 阶段审查发现 Roll 的新 `no-active-activities` 原因若不进入 UI 文案表，会退化为不可操作的通用提示；将文案表收窄为 `Record<EmptyRollReason, string>` 后，后续新增原因会在类型检查阶段强制补齐展示。
 - N2/W2 的反馈撤销语义必须分开处理：progress 与两种 cumulative 依赖 Session 从 settled 变为 voided 后自然回退；experience 则依赖 settlement/reversal 账本 delta 抵消。统一按 Session 或统一按账本都会制造错误的第二事实来源。
 - N2/W2 阶段审查补出反馈反例门槛：progress 与累计次数只接受有效 completed Session；累计分钟接受 settled interrupted 但排除 abandoned。仅测正常完成与撤销无法防止这三条规则在后续重构中被错误合并。
+- N2/W3 表单失败保留不需要复制草稿到 App：让 GoalForm/ActivityForm 持有受控输入，并让命令回调返回 boolean，只有成功才卸载表单即可。同步 `commandInFlight` ref 必须先于 `setBusy` 设置，才能拦截同一渲染帧内的双击。
+- N2/W3 阶段审查要求写失败 E2E 同时观察 UI 与持久事实：仅看到表单仍在不能证明 Store 没有半提交；需直接断言详情未出现新 Activity 且 localStorage 的 activities 数量保持最后成功值。

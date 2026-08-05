@@ -112,6 +112,8 @@ npm run test:run
 
 ### W3：紧凑 Catalog、Goal 详情与多 Activity UI
 
+> 实施状态：完成；code-review 补齐 1 项 Medium 验收缺口，simplify 完成，TypeScript、16 files/74 tests、3 E2E、build 与 Android cap sync 通过
+
 改动文件：
 
 - 重构 `src/ui/goals/GoalsScreen.tsx`
