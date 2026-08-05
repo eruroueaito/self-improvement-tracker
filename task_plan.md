@@ -48,8 +48,8 @@
 
 - [x] 完成现有源码、依赖关系、数据流和测试面的确定性接入点审计
 - [x] 用户确认 N2 首要取向为 A：Roll 优先，并授权后续设计决策采用自动化审查
-- [ ] 冻结、提交并自动复核 N2 书面设计
-- [ ] 写入 N2 详细实施计划
+- [x] 冻结、提交并通过两轮自动规格复核（第一轮修订，第二轮批准）
+- [ ] 写入并核对 N2 详细实施计划
 - [ ] Goal 详情、多 ActivityTemplate 管理、反馈模型展示和开发种子模式
 - [ ] 验证 5 分钟创建、15 秒 Roll 与全离线体验
 - [ ] 执行审查、简化、验证与独立提交
@@ -170,6 +170,8 @@
 
 | 错误 | 尝试 | 处理 |
 |---|---:|---|
+| N2 实施计划两行 Markdown 尾随空格令 `git diff --cached --check` 非零，但 PowerShell 顺序命令仍继续创建了本地 commit | 1 | 改成空引用行格式、重新运行 check，并 amend 尚未推送的提交；后续把检查与提交分开调用 |
+| 用 PowerShell `foreach` 的语句结果直接接管道检查 `writing-plans` 路径时触发 `An empty pipe element is not allowed` | 1 | 改为在循环内逐行 `Write-Output`；确认两个候选路径均不存在，不再重复原命令 |
 | 按默认 `.codex/skills` 路径运行 `session-catchup.py` 时文件不存在 | 1 | 用 `rg --files` 定位到 `.agents/skills/planning-with-files/planning-with-files/scripts/` 后成功运行 |
 | 用 `rg --files` 查找现有计划/说明文件返回退出码 1 | 1 | 解释为当前空目录中无匹配文件，不重复执行 |
 | PowerShell 默认代码页读取 UTF-8 附件导致中文乱码 | 1 | 改用 `.NET ReadAllText(..., UTF8)` 成功恢复完整正文 |

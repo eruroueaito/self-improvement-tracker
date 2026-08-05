@@ -266,3 +266,4 @@
 - N2 自动设计采用“紧凑 Catalog + 独立 Goal 详情”：保留全局 Roll 为默认页和底部中央主入口，Catalog 不展开活动编辑，详情承载 Goal 状态、三种反馈、多活动、归档恢复与最近记录。
 - 最后一条可执行 Activity 允许归档；Goal 可继续 active，但 Catalog/详情必须显示“需要活动”，Roll 把它区分为 `no-active-activities` 并返回可操作提示，不自动暂停或阻止用户操作。
 - N2 不迁移 schema：沿用现有 Goal/Activity 一对多事实集合；新增独立 Goal/Activity 应用命令、只读详情 selectors 和开发种子 fixture。开发种子必须显式触发、使用保留 ID、可清除并重复安装。
+- brainstorming 指定的 `writing-plans` skill 在当前可用技能清单和两个标准本地路径中均不存在；规格通过后使用项目已强制启用的 planning-with-files 编写等价、可执行、逐文件的 N2 实施计划，并明确记录该回退。

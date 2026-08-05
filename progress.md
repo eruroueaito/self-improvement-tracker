@@ -239,3 +239,5 @@
 - 开始写入 `docs/superpowers/specs/2026-08-05-n2-offline-goal-catalog-design.md`，提交后按 brainstorming 要求执行最多三轮独立规格审查。
 - N2 规格第一轮独立审查状态为 Issues Found：开发种子清理与正式事实不删除规则冲突、progress ratio 普通公式缺失、production artifact 未验证 seed 不可达；另建议 recent Session 使用稳定次级排序。
 - 已明确 `dev-seed:` 是唯一物理删除例外，ratio 使用 baseline-relative clamp 公式，recent Session 以 ID 次级排序，并新增真实 `dist`/`vite preview` production E2E 门槛；准备第二轮审查。
+- N2 规格第二轮独立审查状态为 Approved，无问题、无建议；规格状态已冻结为自动审查通过。
+- brainstorming 要求的 `writing-plans` 在可用技能清单和标准本地路径中均不存在；按项目强制 planning-with-files 流程生成等价逐文件实施计划，用户已授权无需额外人工复核。
