@@ -68,7 +68,7 @@
 - [x] 原创像素伙伴 3 阶段 × 4 状态、短动画、静态降级和解锁投影
 - [x] 执行奖励滥用测试、审查、简化、验证与独立提交
 
-### 阶段 15：N4 AI 基础与 GoalDraft（待开始）
+### 阶段 15：N4 AI 基础与 GoalDraft（设计与依赖审计中）
 
 - [ ] 审计并选定 MIT SecretStore，实现 ProviderAdapter 与严格网络边界
 - [ ] 实现可关闭、可编辑、确认后才写库的 GoalDraft
@@ -254,3 +254,5 @@
 | 更新 E2E 与 progress 的组合补丁再次在文件切换前遗留空 `@@` | 1 | apply_patch 原子拒绝且未修改文件；先单独应用完整 E2E hunk，再以真实末行上下文更新规划文件 |
 | PowerShell 下用 `rg src/app/*.test.ts` 查询通知测试，Windows 不展开该 glob | 1 | 已直接读到产品分支确认 notificationsEnabled 门槛；后续用 `rg ... src/app -g '*.test.ts'` 搜索测试，不重复无效路径 |
 | W5 最终链把含单双引号的 remote CSS `rg` 正则嵌入 PowerShell 双引号命令，解析器在执行前失败 | 1 | 该次没有运行任何测试；拆为不含复杂正则的主验证链与独立只读扫描后，全部门槛完整通过 |
+| 审计 `@aparajita/capacitor-secure-storage` 时假定 Git tag 为 `8.0.0`，GitHub contents/tree API 返回 404 | 1 | npm 元数据已成功取得；不重复错误 ref，先读取仓库 tags/releases 确认真实 tag 后再检查源码与备份规则 |
+| PowerShell 调用 `gh api --jq` 时嵌套正则引号被参数解析剥离，两个 tree 过滤表达式均未执行 | 1 | 不重复嵌套 jq 正则；改为让 `gh api` 返回 JSON，再由 PowerShell `ConvertFrom-Json` 和 `Where-Object` 过滤路径 |
