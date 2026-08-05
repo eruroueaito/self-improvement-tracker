@@ -66,4 +66,30 @@ describe('runRollEngine', () => {
     expect(result.run.candidates[0]?.scoreParts.explicitDismissPenalty).toBe(-12);
     expect(result.run.candidates[0]?.scoreParts.recentCompletionPenalty).toBe(-15);
   });
+
+  it('distinguishes missing Goals from missing active Activities', () => {
+    const withoutGoals = runRollEngine({
+      runId: 'no-goals', now, context: { availableMinutes: 25, energy: null, contexts: [] },
+      goals: [], activities: [], sessions: [], previousRuns: [],
+    });
+    const withoutActivities = runRollEngine({
+      runId: 'no-activities', now, context: { availableMinutes: 25, energy: null, contexts: [] },
+      goals: [goal('g')], activities: [activity('archived', 'g', { archivedAt: now })], sessions: [], previousRuns: [],
+    });
+
+    expect(withoutGoals.emptyReason).toBe('no-active-goals');
+    expect(withoutActivities.emptyReason).toBe('no-active-activities');
+  });
+
+  it('keeps other active Activities eligible when one is archived', () => {
+    const result = runRollEngine({
+      runId: 'run', now, context: { availableMinutes: 25, energy: null, contexts: [] },
+      goals: [goal('g')],
+      activities: [activity('archived', 'g', { archivedAt: now }), activity('active', 'g')],
+      sessions: [], previousRuns: [],
+    });
+
+    expect(result.emptyReason).toBeNull();
+    expect(result.run.candidates.map((candidate) => candidate.activityTemplateId)).toEqual(['active']);
+  });
 });

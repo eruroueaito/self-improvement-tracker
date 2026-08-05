@@ -39,8 +39,6 @@ describe('MvpApplication offline loop', () => {
     await app.updateGoal(
       createdSnapshot.goals[0]!.id,
       { title: '阅读计划', importance: 4, feedback: { type: 'cumulative', unit: 'times' }, defaultEnergyCost: 2 },
-      createdSnapshot.activities[0]!.id,
-      { title: '读十页', minimumMinutes: 10, maximumMinutes: 30, energyCost: 2 },
     );
     const rolled = await app.roll({ availableMinutes: 25, energy: 2, contexts: [] });
     const activityId = rolled.run.candidates[0]!.activityTemplateId;

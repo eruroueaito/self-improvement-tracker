@@ -267,3 +267,5 @@
 - 最后一条可执行 Activity 允许归档；Goal 可继续 active，但 Catalog/详情必须显示“需要活动”，Roll 把它区分为 `no-active-activities` 并返回可操作提示，不自动暂停或阻止用户操作。
 - N2 不迁移 schema：沿用现有 Goal/Activity 一对多事实集合；新增独立 Goal/Activity 应用命令、只读详情 selectors 和开发种子 fixture。开发种子必须显式触发、使用保留 ID、可清除并重复安装。
 - brainstorming 指定的 `writing-plans` skill 在当前可用技能清单和两个标准本地路径中均不存在；规格通过后使用项目已强制启用的 planning-with-files 编写等价、可执行、逐文件的 N2 实施计划，并明确记录该回退。
+- N2/W1 红灯测试确认既有联合 `updateGoal` 是多 Activity 的实际阻点；把 Goal-only 与 Activity 命令拆开后，无需修改 schema 或 Store 端口即可维持单次 `replace` 原子边界。归档最后一条 Activity 也只需扩展 Roll 空原因，不需要改变 Goal 状态。
+- N2/W1 阶段审查发现 Roll 的新 `no-active-activities` 原因若不进入 UI 文案表，会退化为不可操作的通用提示；将文案表收窄为 `Record<EmptyRollReason, string>` 后，后续新增原因会在类型检查阶段强制补齐展示。

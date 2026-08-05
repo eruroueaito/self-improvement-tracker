@@ -128,13 +128,15 @@ export const runRollEngine = (input: {
 
   let emptyReason: EmptyRollReason | null = null;
   if (candidates.length === 0) {
-    emptyReason = activeGoals.length === 0 || available.length === 0
+    emptyReason = activeGoals.length === 0
       ? 'no-active-goals'
-      : fitsTime.length === 0
-        ? 'time-too-short'
-        : fitsContext.length === 0
-          ? 'context-mismatch'
-          : 'resting';
+      : available.length === 0
+        ? 'no-active-activities'
+        : fitsTime.length === 0
+          ? 'time-too-short'
+          : fitsContext.length === 0
+            ? 'context-mismatch'
+            : 'resting';
   }
 
   return {

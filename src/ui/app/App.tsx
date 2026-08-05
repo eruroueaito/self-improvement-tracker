@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createMvpApplication } from '../../app/composition';
 import type { AppSnapshot } from '../../app/ports';
+import type { EmptyRollReason } from '../../modules/recommendations/types';
 import { FocusScreen } from '../focus/FocusScreen';
 import { GoalsScreen } from '../goals/GoalsScreen';
 import { HistoryScreen } from '../history/HistoryScreen';
@@ -19,8 +20,9 @@ import { RecoveryScreen } from './RecoveryScreen';
 type Tab = 'goals' | 'roll' | 'history';
 type Screen = Tab | 'focus' | 'settlement';
 
-const EMPTY_REASON: Record<string, string> = {
+const EMPTY_REASON: Record<EmptyRollReason, string> = {
   'no-active-goals': '先创建并启用一个目标与活动。',
+  'no-active-activities': '当前目标没有可用活动，请先添加或恢复一个活动。',
   'time-too-short': '当前时间少于所有活动的最短时长。',
   'context-mismatch': '当前场景不满足活动要求。',
   resting: '匹配的活动仍在恢复期，稍后再试。',
@@ -160,7 +162,7 @@ export function App() {
               setNotice('目标和第一个活动已保存在本机。');
             })}
             onUpdate={(goalId, goal, activityId, activity) => executeCommand(async () => {
-              await application.updateGoal(goalId, goal, activityId, activity);
+              await application.updateGoalAndActivity(goalId, goal, activityId, activity);
               setNotice('目标和活动已更新。');
             })}
             onStatus={(id, status) => executeCommand(() => application.setGoalStatus(id, status))}
@@ -197,7 +199,7 @@ export function App() {
             onRoll={(availableMinutes, energy, contexts) => executeCommand(async () => {
               const result = await application.roll({ availableMinutes, energy, contexts });
               setCurrentRunId(result.run.id);
-              setNotice(result.emptyReason ? (EMPTY_REASON[result.emptyReason] ?? '当前没有合适候选。') : null);
+              setNotice(result.emptyReason ? EMPTY_REASON[result.emptyReason] : null);
             })}
             onDismiss={(runId, activityId) => executeCommand(async () => {
               await application.dismissRecommendation(runId, activityId);

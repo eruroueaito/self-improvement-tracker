@@ -97,6 +97,30 @@ export class MvpApplication {
     this.snapshot = next;
   }
 
+  private buildActivity(goalId: string, normalized: ActivityDraft, now: number, id: string): ActivityTemplate {
+    return {
+      id,
+      goalId,
+      title: normalized.title,
+      description: normalized.description ?? '',
+      minimumMinutes: normalized.minimumMinutes,
+      maximumMinutes: normalized.maximumMinutes,
+      energyCost: normalized.energyCost,
+      contexts: normalized.contexts ?? [],
+      minimumRestHours: normalized.minimumRestHours ?? null,
+      suggestedCadenceDays: normalized.suggestedCadenceDays ?? null,
+      rewardWeight: normalized.rewardWeight ?? 1,
+      createdAt: now,
+      archivedAt: null,
+    };
+  }
+
+  private findActivityForGoal(snapshot: AppSnapshot, goalId: string, activityId: string): ActivityTemplate {
+    const activity = snapshot.activities.find((candidate) => candidate.id === activityId && candidate.goalId === goalId);
+    if (!activity) throw new ValidationError('活动不存在或不属于该目标');
+    return activity;
+  }
+
   async createGoal(goalDraft: GoalDraft, activityDraft: ActivityDraft): Promise<CreateGoalResult> {
     const normalizedGoal = normalizeGoalDraft(goalDraft);
     const normalizedActivity = normalizeActivityDraft(activityDraft);
@@ -114,26 +138,22 @@ export class MvpApplication {
       createdAt: now,
       updatedAt: now,
     };
-    const activity: ActivityTemplate = {
-      id: this.ids.next(),
-      goalId: goal.id,
-      title: normalizedActivity.title,
-      description: normalizedActivity.description ?? '',
-      minimumMinutes: normalizedActivity.minimumMinutes,
-      maximumMinutes: normalizedActivity.maximumMinutes,
-      energyCost: normalizedActivity.energyCost,
-      contexts: normalizedActivity.contexts ?? [],
-      minimumRestHours: normalizedActivity.minimumRestHours ?? null,
-      suggestedCadenceDays: normalizedActivity.suggestedCadenceDays ?? null,
-      rewardWeight: normalizedActivity.rewardWeight ?? 1,
-      createdAt: now,
-      archivedAt: null,
-    };
+    const activity = this.buildActivity(goal.id, normalizedActivity, now, this.ids.next());
     const next = this.getSnapshot();
     next.goals.push(goal);
     next.activities.push(activity);
     await this.commit(next);
-    return { goal, activity };
+    return { goal: structuredClone(goal), activity: structuredClone(activity) };
+  }
+
+  async createActivity(goalId: string, activityDraft: ActivityDraft): Promise<ActivityTemplate> {
+    const next = this.getSnapshot();
+    if (!next.goals.some((goal) => goal.id === goalId)) throw new ValidationError('目标不存在');
+    const normalizedActivity = normalizeActivityDraft(activityDraft);
+    const activity = this.buildActivity(goalId, normalizedActivity, this.clock.now(), this.ids.next());
+    next.activities.push(activity);
+    await this.commit(next);
+    return structuredClone(activity);
   }
 
   async setGoalStatus(goalId: string, status: GoalStatus): Promise<void> {
@@ -145,7 +165,64 @@ export class MvpApplication {
     await this.commit(next);
   }
 
-  async updateGoal(goalId: string, goalDraft: GoalDraft, activityId: string, activityDraft: ActivityDraft): Promise<void> {
+  async updateGoal(goalId: string, goalDraft: GoalDraft): Promise<void> {
+    const normalizedGoal = normalizeGoalDraft(goalDraft);
+    const next = this.getSnapshot();
+    const goal = next.goals.find((candidate) => candidate.id === goalId);
+    if (!goal) throw new ValidationError('目标不存在');
+    Object.assign(goal, {
+      title: normalizedGoal.title,
+      description: normalizedGoal.description ?? '',
+      importance: normalizedGoal.importance,
+      feedback: normalizedGoal.feedback,
+      desiredCadenceDays: normalizedGoal.desiredCadenceDays ?? null,
+      minimumRestHours: normalizedGoal.minimumRestHours ?? 0,
+      defaultEnergyCost: normalizedGoal.defaultEnergyCost,
+      updatedAt: this.clock.now(),
+    });
+    await this.commit(next);
+  }
+
+  async updateActivity(goalId: string, activityId: string, activityDraft: ActivityDraft): Promise<void> {
+    const normalizedActivity = normalizeActivityDraft(activityDraft);
+    const next = this.getSnapshot();
+    const activity = this.findActivityForGoal(next, goalId, activityId);
+    Object.assign(activity, {
+      title: normalizedActivity.title,
+      description: normalizedActivity.description ?? '',
+      minimumMinutes: normalizedActivity.minimumMinutes,
+      maximumMinutes: normalizedActivity.maximumMinutes,
+      energyCost: normalizedActivity.energyCost,
+      contexts: normalizedActivity.contexts ?? [],
+      minimumRestHours: normalizedActivity.minimumRestHours ?? null,
+      suggestedCadenceDays: normalizedActivity.suggestedCadenceDays ?? null,
+      rewardWeight: normalizedActivity.rewardWeight ?? 1,
+    });
+    await this.commit(next);
+  }
+
+  async archiveActivity(goalId: string, activityId: string): Promise<void> {
+    const next = this.getSnapshot();
+    const activity = this.findActivityForGoal(next, goalId, activityId);
+    if (activity.archivedAt !== null) return;
+    activity.archivedAt = this.clock.now();
+    await this.commit(next);
+  }
+
+  async restoreActivity(goalId: string, activityId: string): Promise<void> {
+    const next = this.getSnapshot();
+    const activity = this.findActivityForGoal(next, goalId, activityId);
+    if (activity.archivedAt === null) return;
+    activity.archivedAt = null;
+    await this.commit(next);
+  }
+
+  async updateGoalAndActivity(
+    goalId: string,
+    goalDraft: GoalDraft,
+    activityId: string,
+    activityDraft: ActivityDraft,
+  ): Promise<void> {
     const normalizedGoal = normalizeGoalDraft(goalDraft);
     const normalizedActivity = normalizeActivityDraft(activityDraft);
     const next = this.getSnapshot();

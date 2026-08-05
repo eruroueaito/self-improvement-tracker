@@ -244,3 +244,6 @@
 - N2 实施计划第一轮独立审查状态为 Issues Found：W1 漏迁移旧 `updateGoal` 测试、三反馈撤销覆盖不足、branch push 不触发现有 CI、UI 重复提交/失败保留输入未测试。
 - 已补 W1 文件范围和迁移步骤、每种反馈结算—撤销断言、中央 `commandInFlight` 并发保护与 Storage 失败 E2E，并要求以现有 draft PR 的 pull_request run/head SHA 作为远端 Android 证据；准备第二轮计划审查。
 - N2 实施计划第二轮独立审查状态为 Approved，无问题、无建议；设计与计划门槛关闭，进入 W1 测试先行实现。
+- N2/W1 已先建立 10 项专项断言；首轮结果为 4 通过、6 个预期失败，准确覆盖缺失的 Activity 命令、旧联合更新签名和 `no-active-activities`。最小实现已拆分 Goal-only update 与 Activity create/update/archive/restore，旧 UI 暂接临时联合入口；专项 10/10 与 TypeScript 已转绿，待全量回归和阶段审查。
+- N2/W1 code-review 发现并修复 1 项 Low：新 Roll 空原因未进入 UI 文案表会落到通用提示。映射现由联合类型强制穷尽并指向“添加或恢复活动”；simplify 提取 Activity 归属查找以统一三条命令的错误边界，无行为扩张。
+- N2/W1 收口通过：Goal-only update、Activity create/update/archive/restore、跨 Goal 拒绝、幂等归档恢复、Store 失败一致性与 Roll 新空原因均已实现；固定 Node 24 下 TypeScript、15 files/69 tests 和 diff check 全绿，临时 `updateGoalAndActivity` 仅保留到 W3 UI 迁移。

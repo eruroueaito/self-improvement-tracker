@@ -50,6 +50,11 @@
 - [x] 用户确认 N2 首要取向为 A：Roll 优先，并授权后续设计决策采用自动化审查
 - [x] 冻结、提交并通过两轮自动规格复核（第一轮修订，第二轮批准）
 - [x] 写入并通过两轮自动复核 N2 详细实施计划（第一轮修订，第二轮批准）
+- [x] W1：独立 Goal/Activity 命令与 Roll 空原因
+- [ ] W2：Goal Catalog/详情只读 selectors
+- [ ] W3：紧凑 Catalog、Goal 详情与多 Activity UI
+- [ ] W4：确定性开发种子与安全清理
+- [ ] W5–W6：E2E、production 边界、审查、简化与完整证据
 - [ ] Goal 详情、多 ActivityTemplate 管理、反馈模型展示和开发种子模式
 - [ ] 验证 5 分钟创建、15 秒 Roll 与全离线体验
 - [ ] 执行审查、简化、验证与独立提交
