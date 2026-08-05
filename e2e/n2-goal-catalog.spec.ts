@@ -76,6 +76,11 @@ test('manages multiple Activities and preserves failed form input offline', asyn
   await page.getByRole('button', { name: '目标', exact: true }).click();
   await page.getByRole('button', { name: '查看详情' }).click();
   await page.getByText('已归档活动（2）').click();
+  const archivedReadingCard = page.locator('article').filter({ has: page.getByRole('heading', { name: '读十页' }) });
+  await archivedReadingCard.getByRole('button', { name: '编辑活动' }).click();
+  await page.getByLabel('活动名称').fill('读十二页');
+  await page.getByRole('button', { name: '保存修改' }).click();
+  await expect(page.getByRole('heading', { name: '读十二页' })).toBeVisible();
   const archivedNoteCard = page.locator('article').filter({ has: page.getByRole('heading', { name: '整理卡片笔记' }) });
   await archivedNoteCard.getByRole('button', { name: '恢复活动' }).click();
   await expect(page.getByText('这个进行中的目标需要至少一个可用活动。')).toHaveCount(0);

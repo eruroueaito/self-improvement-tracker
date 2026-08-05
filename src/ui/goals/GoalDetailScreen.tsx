@@ -42,6 +42,19 @@ export function GoalDetailScreen(props: {
   const editedActivity = activityEditor?.activityId
     ? detail.activeActivities.concat(detail.archivedActivities).find((activity) => activity.id === activityEditor.activityId)
     : undefined;
+  const editingArchivedActivity = editedActivity?.archivedAt !== null && editedActivity !== undefined;
+  const activityForm = activityEditor ? (
+    <ActivityForm
+      key={activityEditor.activityId ?? 'new'}
+      activity={editedActivity}
+      busy={props.busy}
+      onSubmit={(draft) => activityEditor.activityId === null
+        ? props.onCreateActivity(detail.goal.id, draft)
+        : props.onUpdateActivity(detail.goal.id, activityEditor.activityId, draft)}
+      onCancel={() => setActivityEditor(null)}
+      onDone={() => setActivityEditor(null)}
+    />
+  ) : null;
   const renderActivity = (activity: (typeof detail.activeActivities)[number], archived: boolean) => (
     <article className={`card activity-card ${archived ? 'archived-activity' : ''}`} key={activity.id}>
       <div>
@@ -98,18 +111,7 @@ export function GoalDetailScreen(props: {
         {detail.goal.status === 'active' && detail.activeActivities.length === 0 && (
           <div className="message warning" role="status">这个进行中的目标需要至少一个可用活动。</div>
         )}
-        {activityEditor && (
-          <ActivityForm
-            key={activityEditor.activityId ?? 'new'}
-            activity={editedActivity}
-            busy={props.busy}
-            onSubmit={(draft) => activityEditor.activityId === null
-              ? props.onCreateActivity(detail.goal.id, draft)
-              : props.onUpdateActivity(detail.goal.id, activityEditor.activityId, draft)}
-            onCancel={() => setActivityEditor(null)}
-            onDone={() => setActivityEditor(null)}
-          />
-        )}
+        {!editingArchivedActivity && activityForm}
         <div className="activity-list">
           {detail.activeActivities.map((activity) => renderActivity(activity, false))}
         </div>
@@ -118,6 +120,7 @@ export function GoalDetailScreen(props: {
       {detail.archivedActivities.length > 0 && (
         <details className="card archived-list">
           <summary>已归档活动（{detail.archivedActivities.length}）</summary>
+          {editingArchivedActivity && activityForm}
           <div className="activity-list">{detail.archivedActivities.map((activity) => renderActivity(activity, true))}</div>
         </details>
       )}

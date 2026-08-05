@@ -276,3 +276,4 @@
 - N2/W4 清理必须对 RewardLedger 做引用闭包：不仅移除 demo Goal/Session 的奖励，还要移除 `reversalOfEntryId` 指向保留命名空间或已删除奖励的依赖账目，否则导入校验会把清理结果视为悬空 reversal。
 - N2/W5 四反馈浏览器验收发现 progress 数字控件与领域契约不一致：`min=0.01` 配默认 step=1 会让整数目标 50 被浏览器判为非法；baseline/target 必须显式 `step="any"` 才能接受领域允许的任意有限进度值。
 - N2 production 边界不能由 `import.meta.env.DEV` 源码条件单独证明；必须用真实 build 后的 `vite preview` 遍历公开导航并观察可访问名称与持久事实。开发服务器 E2E 即使隐藏按钮，也不能替代 production artifact 证据。
+- N2/W6 完整 diff 审查发现归档 Activity 的编辑表单若统一渲染在 active 区，会在移动端出现在当前视口上方，让点击看似无响应；编辑器必须跟随 active/archived 分组就地渲染。
