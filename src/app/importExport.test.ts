@@ -123,4 +123,31 @@ describe('versioned import and export', () => {
     });
     expect(() => validateImportEnvelope(badSession)).toThrow(/plannedMinutes.*有限数字/);
   });
+
+  it('rejects reversal timestamps before their settlement but accepts the same millisecond', () => {
+    const envelope = v1Envelope();
+    const data = envelope.data as Record<string, unknown>;
+    (data.sessions as unknown[]).push({
+      id: 'reward-session', goalId: 'goal-v1', activityTemplateId: 'activity-v1', recommendationRunId: null,
+      timerMode: 'flowtime', status: 'voided', plannedMinutes: null, startedAt: 1, runningSince: null,
+      accumulatedMs: 60_000, targetDurationMs: null, lastHeartbeatAt: 5, endedAt: 5, endType: 'completed',
+      settlement: { actualMinutes: 1, completionRatio: 1, difficulty: null, effort: null, quantity: null, quantityUnit: null, userNote: '' },
+      createdAt: 1, settledAt: 5,
+    });
+    data.rewardEntries = [
+      { id: 'settlement', sessionId: 'reward-session', goalId: 'goal-v1', entryType: 'settlement', globalXpDelta: 5, goalXpDelta: 5, ruleVersion: 1, idempotencyKey: 'settle', reversalOfEntryId: null, createdAt: 10 },
+      { id: 'reversal', sessionId: 'reward-session', goalId: 'goal-v1', entryType: 'reversal', globalXpDelta: -5, goalXpDelta: -5, ruleVersion: 1, idempotencyKey: 'reverse', reversalOfEntryId: 'settlement', createdAt: 9 },
+    ];
+    expect(() => validateImportEnvelope(envelope)).toThrow(/反向奖励.*时间/);
+
+    ((data.rewardEntries as Array<Record<string, unknown>>)[1]!).createdAt = 10;
+    expect(validateImportEnvelope(envelope).snapshot.rewardEntries).toHaveLength(2);
+
+    (data.rewardEntries as unknown[]).push({
+      id: 'duplicate-reversal', sessionId: 'reward-session', goalId: 'goal-v1', entryType: 'reversal',
+      globalXpDelta: -5, goalXpDelta: -5, ruleVersion: 1, idempotencyKey: 'reverse-again',
+      reversalOfEntryId: 'settlement', createdAt: 11,
+    });
+    expect(() => validateImportEnvelope(envelope)).toThrow(/重复反向/);
+  });
 });

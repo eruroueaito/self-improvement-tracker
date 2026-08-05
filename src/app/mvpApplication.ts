@@ -376,7 +376,7 @@ export class MvpApplication {
     };
     next.sessions[next.sessions.findIndex((candidate) => candidate.id === sessionId)] = settledSession;
     next.rewardEntries.push(entry);
-    next.companionProjection = { ...rebuildCompanionProjection(next.rewardEntries, now), mood: xp > 0 ? 'celebrating' : 'idle' };
+    next.companionProjection = rebuildCompanionProjection(next.rewardEntries, now);
     await this.commit(next);
     return structuredClone(entry);
   }
@@ -390,6 +390,7 @@ export class MvpApplication {
     const session = this.findSession(next, sessionId);
     if (session.status !== 'settled') throw new ValidationError('该记录已撤销或状态不允许撤销');
     const now = this.clock.now();
+    const reversalCreatedAt = Math.max(now, settlementEntry.createdAt);
     const reversal: RewardLedgerEntry = {
       id: this.ids.next(),
       sessionId,
@@ -400,7 +401,7 @@ export class MvpApplication {
       ruleVersion: 1,
       idempotencyKey: `reverse:${settlementEntry.id}`,
       reversalOfEntryId: settlementEntry.id,
-      createdAt: now,
+      createdAt: reversalCreatedAt,
     };
     session.status = 'voided';
     next.rewardEntries.push(reversal);

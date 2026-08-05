@@ -250,9 +250,16 @@ export const validateSnapshotFacts = (value: unknown): ValidatedImportData => {
   });
 
   const rewardsById = new Map(rewardRows.map((entry) => [String(entry.id), entry]));
+  const reversedSettlementIds = new Set<string>();
   rewardRows.filter((entry) => entry.entryType === 'reversal').forEach((reversal) => {
-    const original = rewardsById.get(String(reversal.reversalOfEntryId));
+    const originalId = String(reversal.reversalOfEntryId);
+    const original = rewardsById.get(originalId);
     if (!original || original.entryType !== 'settlement') throw new ValidationError('反向奖励必须引用原始结算账目');
+    if (reversedSettlementIds.has(originalId)) throw new ValidationError('原始结算账目不能被重复反向');
+    reversedSettlementIds.add(originalId);
+    if (Number(reversal.createdAt) < Number(original.createdAt)) {
+      throw new ValidationError('反向奖励时间不能早于原始结算账目');
+    }
     if (
       reversal.sessionId !== original.sessionId ||
       reversal.goalId !== original.goalId ||

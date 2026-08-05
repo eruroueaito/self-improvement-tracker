@@ -6,7 +6,7 @@
  * 注意事项：所有奖励都受幂等键保护，撤销通过反向账目完成
  */
 import type { Session } from '../sessions/types';
-import type { CompanionProjection, RewardLedgerEntry } from './types';
+import type { CompanionProjection, RewardLedgerEntry, RewardReplayState } from './types';
 
 const baseXp = (minutes: number): number => {
   if (minutes < 5) return 0;
@@ -41,18 +41,36 @@ export const calculateXp = (session: Session, rewardWeight: number, repeatIndex:
 const stageFor = (xp: number): CompanionProjection['evolutionStage'] =>
   xp >= 300 ? 'companion' : xp >= 100 ? 'sprout' : 'seed';
 
-export const rebuildCompanionProjection = (entries: RewardLedgerEntry[], now: number): CompanionProjection => {
+const entryTypeOrder: Record<RewardLedgerEntry['entryType'], number> = { settlement: 0, reversal: 1 };
+
+export const compareRewardLedgerEntries = (left: RewardLedgerEntry, right: RewardLedgerEntry): number =>
+  left.createdAt - right.createdAt ||
+  entryTypeOrder[left.entryType] - entryTypeOrder[right.entryType] ||
+  left.id.localeCompare(right.id);
+
+export const replayRewardLedger = (entries: RewardLedgerEntry[]): RewardReplayState => {
   let runningXp = 0;
   let highestXp = 0;
-  for (const entry of [...entries].sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id))) {
+  for (const entry of [...entries].sort(compareRewardLedgerEntries)) {
     runningXp += entry.globalXpDelta;
     highestXp = Math.max(highestXp, runningXp);
   }
-  const globalXp = Math.max(0, runningXp);
+  const currentXp = Math.max(0, runningXp);
+  highestXp = Math.max(0, highestXp);
   return {
-    globalXp,
-    level: Math.floor(Math.max(0, highestXp) / 50) + 1,
-    evolutionStage: stageFor(Math.max(0, highestXp)),
+    currentXp,
+    highestXp,
+    level: Math.floor(highestXp / 50) + 1,
+    evolutionStage: stageFor(highestXp),
+  };
+};
+
+export const rebuildCompanionProjection = (entries: RewardLedgerEntry[], now: number): CompanionProjection => {
+  const replay = replayRewardLedger(entries);
+  return {
+    globalXp: replay.currentXp,
+    level: replay.level,
+    evolutionStage: replay.evolutionStage,
     mood: 'idle',
     lastUpdatedAt: now,
   };

@@ -49,10 +49,13 @@ describe('MvpApplication offline loop', () => {
     const duplicateReward = await app.settle(started.id, { actualMinutes: 25, completionRatio: 1 });
     expect(duplicateReward.id).toBe(firstReward.id);
     expect(app.getSnapshot().companionProjection.globalXp).toBe(21);
+    expect(app.getSnapshot().companionProjection.mood).toBe('idle');
 
+    clock.value = firstReward.createdAt - 1;
     await app.undoSettlement(started.id);
     const duplicateUndo = await app.undoSettlement(started.id);
     expect(duplicateUndo.entryType).toBe('reversal');
+    expect(duplicateUndo.createdAt).toBe(firstReward.createdAt);
     expect(app.getSnapshot().rewardEntries).toHaveLength(2);
     expect(app.getSnapshot().companionProjection.globalXp).toBe(0);
 

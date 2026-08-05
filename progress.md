@@ -271,3 +271,5 @@
 - 已写入 `docs/plans/2026-08-05-n3-companion-activity-state-implementation.md`：五个线性工作包覆盖共享完成判定/ActivityState/账本重放、CompanionView、公平性、CSS UI、production/Android 与最终 CI。30 天临时探针确认现有 Roll 可满足冻结阈值且未留下测试文件；准备独立计划审查。
 - N3 计划首轮独立审查状态为 Issues Found：缺 future reversal 生效时间测试，最终 CI 与完成状态未严格绑定同一不可变 PR revision。已补未来账目边界，并把 W5 改为候选 exact-head CI 与最终状态 exact-head CI 两次核对；进入第二轮计划审查。
 - N3 计划第二轮独立审查状态为 Approved，无问题或建议；规格与逐文件计划均已冻结，开始 W1 红灯测试。
+- N3/W1 红灯覆盖 UTC D-6/D-13 闭区间、同日去重/广度 cap、future/voided/低完成排除、同毫秒账本因果、历史 peak、时钟回拨、持久 mood 与导入因果；最小实现后专项 4 files/17 tests 转绿。
+- W1 code-review 修复 1 项 Medium 重复 reversal 导入缺口；simplify 以共享 `completion.ts` 消除推荐模块反向依赖，并让 CompanionStage 复用既有投影联合。最终 TypeScript、18 files/86 tests 与 diff check 全绿，准备独立提交。

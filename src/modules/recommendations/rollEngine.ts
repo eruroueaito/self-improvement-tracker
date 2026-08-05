@@ -7,16 +7,12 @@
  */
 import type { ActivityTemplate, Goal } from '../goals/types';
 import { normalizeContexts, ValidationError } from '../goals/validation';
+import { isEffectiveCompletion } from '../sessions/completion';
 import type { Session } from '../sessions/types';
 import type { EmptyRollReason, RecommendationCandidate, RecommendationRun, RollContext, RollResult } from './types';
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
-
-export const isEffectiveCompletion = (session: Session): boolean =>
-  session.status === 'settled' &&
-  session.endType === 'completed' &&
-  (session.settlement?.completionRatio ?? 0) >= 0.5;
 
 const rounded = (value: number): number => Math.round(value * 1_000) / 1_000;
 const clamp = (value: number, minimum: number, maximum: number): number => Math.min(maximum, Math.max(minimum, value));

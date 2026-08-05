@@ -35,6 +35,8 @@ N3 确定性实现完成后，应用应当：
 
 ### W1：共享完成判定、ActivityState v1 与奖励重放
 
+> 实施状态：完成；code-review 修复 1 项 Medium 重复 reversal 导入缺口，simplify 完成，TypeScript 与 18 files/86 tests 通过
+
 改动文件：
 
 - 新增 `src/modules/sessions/completion.ts`

@@ -289,3 +289,6 @@
 - N3 计划按五包拆分为领域引擎、运行时 selector、公平性、CSS/DOM UI、production/Android 验收与阶段收口；系统时钟回拨时 reversal 时间必须钳制到原 settlement 时间，避免应用生成自身导入器会拒绝的因果非法账本。
 - N3 计划首轮自动审查补出两个边界：future reversal 不能提前取消仍在 2 秒窗口内的 settlement 庆祝；远端收口必须锁定 PR headRefOid/event/run headSha/artifact 的同一不可变 revision，不能复用旧产品 SHA 的成功记录。
 - N3 计划第二轮独立审查已批准，无问题或建议；设计与执行门槛关闭，按 W1 测试先行进入共享完成判定、ActivityState v1 和规范奖励重放。
+- N3/W1 把有效完成判定下沉到 Session 领域供 Roll、Goal feedback 和 ActivityState 共用；ActivityState 只按 UTC day/Goal Set 计分，接口不存在 XP/rewardWeight，避免推荐模块成为跨域工具依赖。
+- W1 code-review 发现 1 项 Medium：导入器虽校验 reversal 引用与 delta，却允许多个不同幂等键重复反向同一 settlement。现按 original ID fail closed，并补同毫秒因果、反向时间与重复 reversal 回归。
+- 时钟回拨撤销使用 `max(now, settlement.createdAt)` 作为 reversal 事实时间；规范重放固定 createdAt→settlement/reversal→ID，旧持久 projection mood 恒写 idle，运行时庆祝留给 W2 selector。

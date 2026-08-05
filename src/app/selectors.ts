@@ -6,7 +6,7 @@
  * 注意事项：不得在选择器中修改快照或写存储
  */
 import type { ActivityTemplate, Goal } from '../modules/goals/types';
-import { isEffectiveCompletion } from '../modules/recommendations/rollEngine';
+import { isEffectiveCompletion } from '../modules/sessions/completion';
 import type { Session } from '../modules/sessions/types';
 import type { AppSnapshot } from './ports';
 
