@@ -247,3 +247,6 @@
 - N2/W1 已先建立 10 项专项断言；首轮结果为 4 通过、6 个预期失败，准确覆盖缺失的 Activity 命令、旧联合更新签名和 `no-active-activities`。最小实现已拆分 Goal-only update 与 Activity create/update/archive/restore，旧 UI 暂接临时联合入口；专项 10/10 与 TypeScript 已转绿，待全量回归和阶段审查。
 - N2/W1 code-review 发现并修复 1 项 Low：新 Roll 空原因未进入 UI 文案表会落到通用提示。映射现由联合类型强制穷尽并指向“添加或恢复活动”；simplify 提取 Activity 归属查找以统一三条命令的错误边界，无行为扩张。
 - N2/W1 收口通过：Goal-only update、Activity create/update/archive/restore、跨 Goal 拒绝、幂等归档恢复、Store 失败一致性与 Roll 新空原因均已实现；固定 Node 24 下 TypeScript、15 files/69 tests 和 diff check 全绿，临时 `updateGoalAndActivity` 仅保留到 W3 UI 迁移。
+- N2/W2 已先建立 5 组 selector 红灯测试，首轮 5/5 预期失败，覆盖四种反馈结算/撤销、baseline-relative ratio、Catalog needsActivity、活动稳定分组、最近五条与输入不变性；随后补入窄视图与纯派生实现，待专项类型/测试验证。
+- N2/W2 code-review 发现 1 项 Medium 测试缺口：未覆盖 interrupted/abandoned 在 progress、累计次数、累计分钟中的差异；已补反例。simplify 将重复 Settlement 构造收敛为显式 fixture，产品 selector 保持窄函数和纯派生结构。
+- N2/W2 收口通过：反馈视图现包含 type/baseline/value/target/unit/ratio，Catalog 派生活动计数与 needsActivity，详情稳定分组 active/archived Activities 并返回最多五条 settled/voided 记录；TypeScript、专项 5/5、全量 16 files/74 tests 与 diff check 全绿。

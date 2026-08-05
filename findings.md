@@ -269,3 +269,5 @@
 - brainstorming 指定的 `writing-plans` skill 在当前可用技能清单和两个标准本地路径中均不存在；规格通过后使用项目已强制启用的 planning-with-files 编写等价、可执行、逐文件的 N2 实施计划，并明确记录该回退。
 - N2/W1 红灯测试确认既有联合 `updateGoal` 是多 Activity 的实际阻点；把 Goal-only 与 Activity 命令拆开后，无需修改 schema 或 Store 端口即可维持单次 `replace` 原子边界。归档最后一条 Activity 也只需扩展 Roll 空原因，不需要改变 Goal 状态。
 - N2/W1 阶段审查发现 Roll 的新 `no-active-activities` 原因若不进入 UI 文案表，会退化为不可操作的通用提示；将文案表收窄为 `Record<EmptyRollReason, string>` 后，后续新增原因会在类型检查阶段强制补齐展示。
+- N2/W2 的反馈撤销语义必须分开处理：progress 与两种 cumulative 依赖 Session 从 settled 变为 voided 后自然回退；experience 则依赖 settlement/reversal 账本 delta 抵消。统一按 Session 或统一按账本都会制造错误的第二事实来源。
+- N2/W2 阶段审查补出反馈反例门槛：progress 与累计次数只接受有效 completed Session；累计分钟接受 settled interrupted 但排除 abandoned。仅测正常完成与撤销无法防止这三条规则在后续重构中被错误合并。

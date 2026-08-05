@@ -51,7 +51,7 @@
 - [x] 冻结、提交并通过两轮自动规格复核（第一轮修订，第二轮批准）
 - [x] 写入并通过两轮自动复核 N2 详细实施计划（第一轮修订，第二轮批准）
 - [x] W1：独立 Goal/Activity 命令与 Roll 空原因
-- [ ] W2：Goal Catalog/详情只读 selectors
+- [x] W2：Goal Catalog/详情只读 selectors
 - [ ] W3：紧凑 Catalog、Goal 详情与多 Activity UI
 - [ ] W4：确定性开发种子与安全清理
 - [ ] W5–W6：E2E、production 边界、审查、简化与完整证据
@@ -176,6 +176,7 @@
 | 错误 | 尝试 | 处理 |
 |---|---:|---|
 | N2 实施计划两行 Markdown 尾随空格令 `git diff --cached --check` 非零，但 PowerShell 顺序命令仍继续创建了本地 commit | 1 | 改成空引用行格式、重新运行 check，并 amend 尚未推送的提交；后续把检查与提交分开调用 |
+| W2 最近记录把 Goal 条件与 Settlement 类型谓词合在同一 `filter` 后，TypeScript 未保留非空字段收窄 | 1 | 拆为先执行类型谓词、再按 Goal 过滤的两步链，保持运行逻辑不变并让后续排序/映射获得严格类型 |
 | 用 PowerShell `foreach` 的语句结果直接接管道检查 `writing-plans` 路径时触发 `An empty pipe element is not allowed` | 1 | 改为在循环内逐行 `Write-Output`；确认两个候选路径均不存在，不再重复原命令 |
 | 按默认 `.codex/skills` 路径运行 `session-catchup.py` 时文件不存在 | 1 | 用 `rg --files` 定位到 `.agents/skills/planning-with-files/planning-with-files/scripts/` 后成功运行 |
 | 用 `rg --files` 查找现有计划/说明文件返回退出码 1 | 1 | 解释为当前空目录中无匹配文件，不重复执行 |

@@ -76,6 +76,8 @@ npm run test:run
 
 ### W2：Goal Catalog/详情只读 selectors
 
+> 实施状态：完成；code-review 补齐 1 项 Medium 测试缺口，simplify 完成，TypeScript 与 16 files/74 tests 通过
+
 改动文件：
 
 - 修改 `src/app/selectors.ts`
