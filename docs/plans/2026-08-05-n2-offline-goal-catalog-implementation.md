@@ -1,10 +1,12 @@
 # N2 离线 Goal Catalog 与多活动实施计划
 
-> 状态：规格自动审查通过，准备实施
+> 状态：规格与实施计划均通过第二轮自动审查，实施中
 >
 > 设计依据：`docs/superpowers/specs/2026-08-05-n2-offline-goal-catalog-design.md`
 >
 > 范围边界：只补全离线 Goal Catalog、多 Activity、三反馈、最近记录和开发种子；不进入 N3 伙伴、N4/N5 AI、云或统计。
+>
+> Review record：计划第一轮问题已修复；第二轮 Approved，无问题或建议
 
 ## 1. 交付目标
 
