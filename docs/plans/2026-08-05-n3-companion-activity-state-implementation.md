@@ -85,6 +85,8 @@ npm run test:run
 
 ### W2：CompanionView selector、unlock 与 Roll 不变性
 
+> 实施状态：完成；code-review 修复 1 项 Medium 2 秒等号/定时器矛盾，独立规格复核 Approved，simplify 完成，TypeScript 与 20 files/105 tests 通过
+
 改动文件：
 
 - 新增 `src/app/companionSelectors.ts`
@@ -96,7 +98,7 @@ npm run test:run
 1. 空快照在白天返回 seed/Lv.1/0 XP/idle，夜间返回 sleeping；所有输入保持不可变。
 2. unlock 在历史最高 50/150/300 XP 精确边界出现，reversal 后不消失；当前 XP 如实回落。
 3. mood 优先级为 working > celebrating > sleeping > idle；running 与 paused 都是 working。
-4. settlement 仅在 `[now-2000, now]` 闭区间庆祝；0 XP 也庆祝；future 不庆祝；任一 `createdAt <= now` 的对应 reversal 立即使原 settlement 失去资格。对应 reversal 若仍在未来则不能提前取消庆祝，推进 now 到 reversal 时间后才取消。
+4. settlement 仅在 `(now-2000, now]` 半开区间庆祝；0 XP 也庆祝；future 不庆祝；任一 `createdAt <= now` 的对应 reversal 立即使原 settlement 失去资格。对应 reversal 若仍在未来则不能提前取消庆祝，推进 now 到 reversal 时间后才取消。
 5. selector 返回 `celebratingUntil = settlement.createdAt + 2000`，否则为 null；非法 localHour/now 抛 `ValidationError`。
 6. 相同 Roll 输入在调用 selector 前后产生深度/JSON 字节级等价结果，且 selector 接口不接受 ActivityState、stage、mood、level 或 unlock 作为 Roll 参数。
 7. 固定 30 天闭环首选序列冻结为：`study, fitness, study, photo, study, fitness, study, fitness, study, fitness, study, fitness, study, fitness, study, fitness, study, fitness, study, photo, study, fitness, study, fitness, study, fitness, study, fitness, study, fitness`；汇总为 study=15、fitness=13、photo=2，任一占比 <=60%、连续同 Goal <=3，摄影在第 10–16 日不进入候选。
@@ -143,7 +145,7 @@ npm run test:run
 实施步骤：
 
 1. `CompanionAvatar` 接收 `stage/mood/size/motion` 和可选 unlock；使用本地 span/div 构造像素身体、叶冠、眼睛、手脚、星光和 Z。
-2. `App.tsx` 每次渲染把显式 `Date.now()` 与本地小时传给 selector；在 `celebratingUntil > now` 时只注册一次剩余时长 timeout，清理旧 timeout，超时只递增 companion tick，不启常驻计时器。
+2. `App.tsx` 每次渲染把显式 `Date.now()` 与本地小时传给 selector；复用已测试的 `selectCompanionRefreshDelay`，只在正延时存在时注册一次 timeout 并清理旧 timeout；半开窗口的等号边界返回 null，不安排 0ms timer 或常驻计时器。
 3. 顶栏 compact 伙伴只显示可访问 mood、Lv/current XP；Roll hero 使用 expanded 伙伴、正向 ActivityState 文案和已解锁物品。
 4. Focus 通过 Session 自动得到 working；Settlement 后 History 立即可导航；undo 刷新后 selector 立即取消 celebration。
 5. CSS 的 system 动效最长 2 秒且不改变布局/命中区域；`.motion-reduced`、`.motion-none` 与 `@media (prefers-reduced-motion: reduce)` 对伙伴全部设置 animation none/0s。working/sleeping 默认静态。

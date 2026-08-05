@@ -5,7 +5,7 @@
  * 依赖关系：奖励投影类型
  * 注意事项：这些类型不是 schema v2 事实，禁止直接写入 Store 或导出文件
  */
-import type { CompanionProjection } from '../rewards/types';
+import type { CompanionProjection, RewardReplayState } from '../rewards/types';
 
 export interface ActivityStateV1 {
   version: 1;
@@ -19,3 +19,11 @@ export interface ActivityStateV1 {
 export type CompanionMood = 'idle' | 'working' | 'celebrating' | 'sleeping';
 export type CompanionStage = CompanionProjection['evolutionStage'];
 export type CompanionUnlockId = 'desk-book' | 'window-plant' | 'photo-string';
+
+export interface CompanionView {
+  projection: RewardReplayState;
+  activityState: ActivityStateV1;
+  unlocks: CompanionUnlockId[];
+  mood: CompanionMood;
+  celebratingUntil: number | null;
+}

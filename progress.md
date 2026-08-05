@@ -273,3 +273,7 @@
 - N3 计划第二轮独立审查状态为 Approved，无问题或建议；规格与逐文件计划均已冻结，开始 W1 红灯测试。
 - N3/W1 红灯覆盖 UTC D-6/D-13 闭区间、同日去重/广度 cap、future/voided/低完成排除、同毫秒账本因果、历史 peak、时钟回拨、持久 mood 与导入因果；最小实现后专项 4 files/17 tests 转绿。
 - W1 code-review 修复 1 项 Medium 重复 reversal 导入缺口；simplify 以共享 `completion.ts` 消除推荐模块反向依赖，并让 CompanionStage 复用既有投影联合。最终 TypeScript、18 files/86 tests 与 diff check 全绿，准备独立提交。
+- N3/W2 红灯确认 selector 缺失而固定 30 天 Roll 仿真已通过；最小 selector 后 2 files/8 tests 与全量 20 files/94 tests 转绿。阶段审查补出 2000ms 闭区间一次性刷新矛盾，已同步规格/计划并发起快速复核。
+- W2 时间边界首次复核发现 `setTimeout(0)` 在冻结时钟下可能重复；现改为半开 2 秒窗口，2,999ms 仍庆祝、2,000ms 精确退出，并恢复严格正延时的一次性 timer。等待第二轮快速复核。
+- W2 时间修订第二轮独立复核 Approved；新增纯 refresh-delay selector，在冻结 now==deadline 时重复调用均返回 null，为 W3 App effect 提供同一已测试边界。
+- N3/W2 收口通过：unlock 阈值、四 mood 优先级/小时边界、future settlement/reversal、即时 reversal、2 秒半开窗口、冻结 deadline、输入不变、Roll 字节不变与 30 天公平性均覆盖。code-review 的 1 项 Medium 已经独立规格复核关闭；TypeScript、20 files/105 tests 与 diff check 全绿。

@@ -112,7 +112,7 @@ interface ActivityStateV1 {
 心情优先级：
 
 1. 存在 running/paused Session：`working`；
-2. 取 `createdAt` 位于闭区间 `[now - 2_000, now]` 的最新 settlement；仅当不存在 `createdAt <= now` 且 `reversalOfEntryId` 指向它的 reversal 时为 `celebrating`。零 XP 的合法结算也庆祝；对应 reversal 一出现就立即取消庆祝资格，即使原 settlement 仍在 2 秒窗口内；
+2. 取 `createdAt` 位于半开区间 `(now - 2_000, now]` 的最新 settlement；仅当不存在 `createdAt <= now` 且 `reversalOfEntryId` 指向它的 reversal 时为 `celebrating`。零 XP 的合法结算也庆祝；对应 reversal 一出现就立即取消庆祝资格，即使原 settlement 仍在 2 秒窗口内；
 3. `localHour >= 22 || localHour < 7`：`sleeping`；
 4. 其他：`idle`。
 
@@ -146,7 +146,7 @@ interface ActivityStateV1 {
 - `prefers-reduced-motion: reduce` 始终关闭动画；`system` 不等于新增的 `full` 设置，N3 不修改 `AppSettings.motion` 联合类型、默认值或导入格式；
 - sleeping/working 默认静态，避免持续吸引注意。
 
-App 只在 `celebratingUntil > now` 时安排一个一次性 `setTimeout` 触发重算，不启用常驻 1 秒全局计时器。
+App 只在 `celebratingUntil > now` 时安排一个 `celebratingUntil - now` 的一次性 `setTimeout` 触发重算；半开区间在等号处已经退出，因此冻结时钟下也不会重复安排 0ms timer，不启用常驻 1 秒全局计时器。
 
 ## 7. Roll 与公平性硬边界
 

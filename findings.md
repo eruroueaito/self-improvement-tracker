@@ -292,3 +292,6 @@
 - N3/W1 把有效完成判定下沉到 Session 领域供 Roll、Goal feedback 和 ActivityState 共用；ActivityState 只按 UTC day/Goal Set 计分，接口不存在 XP/rewardWeight，避免推荐模块成为跨域工具依赖。
 - W1 code-review 发现 1 项 Medium：导入器虽校验 reversal 引用与 delta，却允许多个不同幂等键重复反向同一 settlement。现按 original ID fail closed，并补同毫秒因果、反向时间与重复 reversal 回归。
 - 时钟回拨撤销使用 `max(now, settlement.createdAt)` 作为 reversal 事实时间；规范重放固定 createdAt→settlement/reversal→ID，旧持久 projection mood 恒写 idle，运行时庆祝留给 W2 selector。
+- W2 阶段审查发现规格自身的 2000ms 闭区间与 UI 定时器存在等号矛盾；首个 `>= + setTimeout(0)` 修订又会在冻结时钟下重复调度。最终收敛为 `(now-2000, now]` 半开窗口与 `until > now` 单次定时器：恰好 2 秒确定退出，无 UI 第二事实或轮询。
+- W2 selector 始终从 RewardLedger/Session 重建，恶意持久 projection 的 999 XP/celebrating 值不会进入视图；unlock 精确覆盖 50/150/300，future reversal 到生效时间前不取消庆祝，working 优先于其他 mood。
+- 固定 30 天正式回归冻结逐日首选序列与 study=15/fitness=13/photo=2 汇总；selector 前后 RollResult 字节等价，伙伴模块没有进入 RollEngine API。simplify 只提取正延时 refresh-delay 纯函数，避免 W3 复制边界判断。
