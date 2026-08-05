@@ -237,3 +237,5 @@
 - 自动收敛为“紧凑 Catalog + 独立详情 + 全局 Roll 始终一跳可达”，保留快速创建 Goal/首活动，复杂编辑进入详情。
 - 自动选择允许归档最后一条活动并显式显示“需要活动”；不阻止、不自动暂停，Roll 增加独立可操作原因。
 - 开始写入 `docs/superpowers/specs/2026-08-05-n2-offline-goal-catalog-design.md`，提交后按 brainstorming 要求执行最多三轮独立规格审查。
+- N2 规格第一轮独立审查状态为 Issues Found：开发种子清理与正式事实不删除规则冲突、progress ratio 普通公式缺失、production artifact 未验证 seed 不可达；另建议 recent Session 使用稳定次级排序。
+- 已明确 `dev-seed:` 是唯一物理删除例外，ratio 使用 baseline-relative clamp 公式，recent Session 以 ID 次级排序，并新增真实 `dist`/`vite preview` production E2E 门槛；准备第二轮审查。

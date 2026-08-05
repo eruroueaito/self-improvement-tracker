@@ -39,7 +39,7 @@ N2 要把“一项目标 + 一条首活动”的管理界面升级为可长期�
 - 不实现云同步、账户、远程后端、分析埋点或自动网络请求。
 - 不接入 AI、Provider、SecretStore、自然语言 GoalDraft 或 SettlementDraft；这些属于 N4/N5。
 - 不实现 N3 的像素伙伴素材、动画、状态引擎或解锁。
-- 不删除 Goal、Activity、Session 或 RewardLedger 历史事实；N2 只使用状态和归档字段。
+- 不删除正式用户的 Goal、Activity、Session 或 RewardLedger 历史事实；N2 只使用状态和归档字段。由用户显式安装、且 ID 位于 `dev-seed:` 保留命名空间的开发种子及其依赖事实是唯一例外，必须由“清除开发种子”物理移除以满足可重复演示要求。
 - 不增加路由库、状态管理框架、Repository 层或 schema v3。
 
 ## 4. 方案比较与选择
@@ -124,7 +124,7 @@ Activity 新建和编辑使用独立表单，覆盖 `ActivityDraft` 的全部字
 
 ### 5.6 最近活动与 History
 
-Goal 详情只显示该 Goal 最近五条具有 Settlement 的 Session，按 `settledAt` 降序，包含时间、Activity 标题、实际分钟、完成比例和 settled/voided 状态。voided 记录继续可见，以解释撤销后的反馈变化。
+Goal 详情只显示该 Goal 最近五条具有 Settlement 的 Session，按 `settledAt` 降序、Session ID 升序作为稳定次级键，包含时间、Activity 标题、实际分钟、完成比例和 settled/voided 状态。voided 记录继续可见，以解释撤销后的反馈变化。
 
 “查看全部历史”由 `App.tsx` 写入一次性的 `historyGoalId` 并切到 History；`HistoryScreen` 用它初始化筛选。用户直接点击底部“历史”时清空该上下文并显示全部。History 仍是备注编辑和撤销结算的唯一入口；详情不复制写操作。
 
@@ -162,7 +162,7 @@ Goal 详情只显示该 Goal 最近五条具有 Settlement 的 Session，按 `se
 
 扩展 `src/app/selectors.ts`，不把任何展示值写入快照：
 
-- `selectGoalFeedback(snapshot, goal)`：保留现有主文本并补充 feedback type、baseline、value、target、unit、ratio；progress 在 baseline==target 时 ratio=1，其他类型 ratio=null。
+- `selectGoalFeedback(snapshot, goal)`：保留现有主文本并补充 feedback type、baseline、value、target、unit、ratio。progress 在 baseline==target 时 ratio=1；否则严格使用 `clamp((value - baseline) / (target - baseline), 0, 1)`。cumulative 和 experience 的 ratio=null，不伪造百分比。
 - `selectGoalCatalogItems(snapshot)`：为每个 Goal 返回 feedback、activeActivityCount 和 needsActivity。
 - `selectGoalDetail(snapshot, goalId)`：返回 Goal、feedback、按 createdAt 稳定排序的 active/archived Activities，以及最近五条 Settlement 记录。
 
@@ -193,6 +193,8 @@ selector 不修改输入、不缓存跨快照结果、不访问时间、存储�
 ### 9.1 可见性
 
 `DevelopmentSeedPanel` 仅在 `import.meta.env.DEV` 为 true 时渲染，放在“本地数据与设置”内的独立折叠区。production build 不显示入口，也不会自动执行种子命令。
+
+production 分支不构造、不传递 seed UI callbacks；`MvpApplication` 实例保持在 React 闭包内，不挂到 `window` 或其他公共运行时接口。因此 production 用户没有可触发 seed 命令的产品路径。应用层方法可以保留以便契约测试，但“存在于源代码”不得被误解为“对 production 用户可调用”。
 
 ### 9.2 确定性事实
 
@@ -252,6 +254,7 @@ selector 不修改输入、不缓存跨快照结果、不访问时间、存储�
 - progress/cumulative/experience 都显示正确；结算撤销后详情刷新一致。
 - Goal 详情最近记录与 History 当前 Goal 筛选一致。
 - 开发种子入口只在开发服务器出现，安装、清除和重装闭环通过。
+- production 验证必须先执行 `npm run build`，再用 Playwright 启动 `vite preview` 访问真实 `dist`：断言没有开发种子区、按钮或可访问名称；遍历全部公开导航后仍不存在 seed 控件，且预置的无 seed 本地快照不产生任何 `dev-seed:` 事实。仅有 build 成功不能满足该边界。
 - 全流程监听请求并断言没有测试源以外的网络目标。
 
 ### 12.3 工程门槛
@@ -260,6 +263,7 @@ selector 不修改输入、不缓存跨快照结果、不访问时间、存储�
 - `npm run test:run`
 - `npm run verify:n0:network`
 - `npm run e2e`
+- `npm run e2e:production`（启动 `vite preview` 验证 production artifact 的 seed 不可达边界）
 - `npm run build`
 - `npm run cap:sync`
 - Android CI `assembleDebug`、manifest/hash 复核和 artifact 上传
