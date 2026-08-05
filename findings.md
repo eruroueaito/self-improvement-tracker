@@ -305,3 +305,4 @@
 - W5 对 `b71d38e..HEAD` 的 34 文件完整差异复审没有遗留 High/Medium；此前重复 reversal、2000ms 边界和 reduced-motion 子节点泄漏均有回归覆盖。simplify 判断窄纯函数与显式 3×4/motion 验收矩阵比新增抽象更清晰，因此没有制造行为无关改动。
 - N3 本地候选门槛完整通过：TypeScript、21 files/122 tests、11 dev E2E、4 production E2E、0 runtime 漏洞、74 产品文件/2 manifest 网络边界、production build、Android cap sync、离线 smoke runner 与 diff check；独立扫描未发现产品 fetch/XHR/WebSocket、远程资产 URL 或 secret-shaped 字段。
 - 首次组合 W5 命令因把含单双引号的 remote CSS 正则嵌入 PowerShell 双引号而在解析阶段退出，任何测试都未开始；随后把确定性主链和独立只读扫描拆开并完整通过，不能把解析失败误记为产品门槛失败。
+- N3 候选 SHA `dd643bcfa4f36381725a7ecd310cb75d97013651` 与 draft PR #1 `headRefOid`、`pull_request` run `30988130612` 的 `headSha` 完全一致；run 3m23s 全绿，production/网络门槛、Android sync、assembleDebug、merged manifest/APK 校验与上传步骤均成功。新 artifact `self-improvement-tracker-debug-apk` ID `8923018673`、14,569,931 bytes，APK SHA-256 `d32e2e367a5ec07ee3fc63f1848d75440396222ae246f0b756141433fe5d849b`。

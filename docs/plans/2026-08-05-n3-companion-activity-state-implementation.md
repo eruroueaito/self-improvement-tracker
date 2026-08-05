@@ -2,7 +2,7 @@
 
 > 状态：Approved — automated plan review passed in round 2
 >
-> Implementation status：Release candidate — local gates complete; exact-head PR CI and native evidence pending
+> Implementation status：Deterministic implementation complete; native evidence pending
 >
 > 设计依据：`docs/superpowers/specs/2026-08-05-n3-companion-activity-state-design.md`
 >
@@ -215,7 +215,7 @@ npm run cap:sync
 
 ### W5：阶段审查、简化、完整证据与远端 Android CI
 
-> 实施状态：本地完整门槛、完整 diff code-review 与 simplify 已通过；候选 exact-head PR CI 和 native evidence 待完成。
+> 实施状态：确定性实现完成，native evidence pending。候选 `dd643bcfa4f36381725a7ecd310cb75d97013651` 的 exact-head PR run `30988130612` 全绿，artifact `8923018673`；最终状态提交仍按本计划第 8 步接受第二次不可变 exact-head CI 后才进入 N4。
 
 1. 对 W1–W4 完整 diff 执行 code-review，重点检查：
    - imported/reordered ledger 是否伪造历史 peak 或让 reversal 先发生；

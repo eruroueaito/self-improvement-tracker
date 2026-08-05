@@ -4,7 +4,7 @@
 - Date: 2026-08-05
 - Scope: N3 完整伙伴反馈、公平性与本地视觉状态
 - Decision authority: 用户已授权普通产品决策自动收敛并自动审查，不再逐项询问
-- Implementation: Release candidate — local deterministic gates complete; exact-head PR CI and native evidence pending
+- Implementation: Deterministic implementation complete; native evidence pending
 
 ## 1. 目标与边界
 
