@@ -11,6 +11,8 @@ The basic MVP contains no account, cloud sync, analytics, advertising, remote as
 - Deterministically Roll up to three actions from local facts.
 - Run Flowtime or Countdown sessions, then manually settle and annotate them.
 - Maintain an idempotent XP ledger, reversible history, and a non-punitive local companion.
+- Rebuild versioned activity and companion state from canonical session/reward facts, including current and historical-peak XP.
+- Render an original fully local CSS/DOM pixel companion across 3 stages × 4 positive states, with 50/150/300 XP room unlocks and reduced-motion fallbacks.
 - Export, clear, validate, and re-import the complete local dataset.
 - Persist with SQLite on Android and versioned localStorage in the browser development shell.
 
@@ -36,4 +38,4 @@ cd android
 
 Architecture and product decisions are recorded in `docs/adr/` and the accepted MVP specification is in `docs/superpowers/specs/2026-08-04-basic-mvp-design.md`.
 
-The repository has passed TypeScript, Vitest, development and production Playwright suites, Vite build, Capacitor sync, and clean Ubuntu CI assembly of a verified debug APK. N2's deterministic Goal Catalog, multi-activity, feedback, and development-seed scope is complete. Installation, native plugin behavior, and small-screen device evidence still require a ready API 33+ emulator or physical Android device.
+The repository has passed TypeScript, Vitest, development and production Playwright suites, Vite build, Capacitor sync, and clean Ubuntu CI assembly of a verified debug APK. N2's deterministic Goal Catalog, multi-activity, feedback, and development-seed scope is complete. N3 is a release candidate with local deterministic activity-state, reward-replay, Roll-invariance, companion-matrix, reduced-motion, offline-boundary, and Android-runner gates complete; exact-head PR CI and native-device visual evidence remain pending. Installation, native plugin behavior, and small-screen device evidence still require a ready API 33+ emulator or physical Android device.

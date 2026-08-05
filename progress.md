@@ -282,3 +282,4 @@
 - 按 Playwright skill 用真实 production preview 检查完整矩阵和 390×844 Roll 首屏；伙伴形态可区分、无远程请求迹象、导航命中区域未被装饰遮挡，2 项窄屏文字问题修复后复截图通过。进入 W4 可重复 production computed-style 与 N3 流程 E2E。
 - W4 新增 3 条伙伴流程 E2E 与 3 条 production matrix/减少动态/320px E2E；专项分别 3/3、production 合计 4/4 通过。首次全量 11 条时旧 MVP 下载流在并行负载下触发 30 秒总预算，已只调整开发 test timeout 到 60 秒并准备全量复验。
 - N3/W4 收口通过：TypeScript、21 files/122 tests、11 dev E2E、4 production E2E、74 产品文件/2 manifest 网络边界、production build 与 Android cap sync 全绿。code-review 无产品缺陷；两项 production 断言按真实动画/可访问树修正，60 秒开发预算下全套复验通过。进入 W5 最终 diff 审查、audit、smoke runner、远端 exact-head CI。
+- N3/W5 本地候选审计全绿：TypeScript、21 files/122 tests、11 dev E2E、4 production E2E、0 runtime 漏洞、74 产品文件/2 manifest 网络边界、production build、Android cap sync、离线 smoke runner、diff check 与显式网络/远程资产/秘密扫描全部通过。完整 diff code-review 无遗留 High/Medium，simplify 无需额外重构；状态进入 release candidate，等待 PR #1 exact-head CI，真实 Android 视觉仍为 native evidence pending。

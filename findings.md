@@ -302,3 +302,6 @@
 - W4 production computed-style 首轮两项失败均为测试解释问题：system 庆祝星光首帧透明度按动画为 0.45 而非恒 1；可见状态标签与 img 可访问名各有三条导致文本计数为 6。修订后仍要求星光 opacity>0、正确动画名和 3 个准确 img，不降低视觉差异门槛。
 - W4 完整浏览器证据确认：0 XP 合法结算庆祝、即时 reversal 取消、正延时 timer 两秒退出；历史 310 XP peak 在 current 0 时仍为 Lv.7/companion/三 unlock；system/reduced/none/OS reduce 的真实后代与伪元素 computed style 符合规则。
 - Android smoke 文档已加入 N3 三阶段×四状态、三 motion 路径、320dp、小屏点击、2 秒庆祝与 peak unlock 清单，并继续声明浏览器矩阵/CI APK/fake ADB 不构成原生视觉证据。
+- W5 对 `b71d38e..HEAD` 的 34 文件完整差异复审没有遗留 High/Medium；此前重复 reversal、2000ms 边界和 reduced-motion 子节点泄漏均有回归覆盖。simplify 判断窄纯函数与显式 3×4/motion 验收矩阵比新增抽象更清晰，因此没有制造行为无关改动。
+- N3 本地候选门槛完整通过：TypeScript、21 files/122 tests、11 dev E2E、4 production E2E、0 runtime 漏洞、74 产品文件/2 manifest 网络边界、production build、Android cap sync、离线 smoke runner 与 diff check；独立扫描未发现产品 fetch/XHR/WebSocket、远程资产 URL 或 secret-shaped 字段。
+- 首次组合 W5 命令因把含单双引号的 remote CSS 正则嵌入 PowerShell 双引号而在解析阶段退出，任何测试都未开始；随后把确定性主链和独立只读扫描拆开并完整通过，不能把解析失败误记为产品门槛失败。

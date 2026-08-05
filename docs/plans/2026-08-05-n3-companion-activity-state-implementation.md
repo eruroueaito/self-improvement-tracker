@@ -2,6 +2,8 @@
 
 > 状态：Approved — automated plan review passed in round 2
 >
+> Implementation status：Release candidate — local gates complete; exact-head PR CI and native evidence pending
+>
 > 设计依据：`docs/superpowers/specs/2026-08-05-n3-companion-activity-state-design.md`
 >
 > 范围边界：只实现可重建的伙伴投影、ActivityState v1、原创 CSS 伙伴、公平性与滥用测试；不新增 schema、AI、网络、权限、伙伴 Tab 或负向反馈。
@@ -212,6 +214,8 @@ npm run cap:sync
 提交：`test: add N3 companion production acceptance`
 
 ### W5：阶段审查、简化、完整证据与远端 Android CI
+
+> 实施状态：本地完整门槛、完整 diff code-review 与 simplify 已通过；候选 exact-head PR CI 和 native evidence 待完成。
 
 1. 对 W1–W4 完整 diff 执行 code-review，重点检查：
    - imported/reordered ledger 是否伪造历史 peak 或让 reversal 先发生；
