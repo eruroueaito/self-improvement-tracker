@@ -281,3 +281,7 @@
 - N3 自动方案采用原创 CSS/DOM 像素伙伴，不使用 PNG 生成或第三方素材：同一骨架组合 3 阶段 × 4 状态，最易保证一致性、MIT 归属、production 离线和 reduced-motion。
 - N3 明确不把 ActivityState/伙伴投影接入 Roll。路线中的可选表述与“伙伴不得反向控制/产生 Roll 偏置”的退出标准冲突时，以后者为硬边界；公平性缺陷只能在独立 Roll 规则中修复。
 - ActivityState v1 采用 7 日 active-day 去重（最多 70）+ 14 日不同 Goal breadth（最多 30），避免 rewardWeight、同日刷短任务或单目标重复直接放大视觉状态；分数不以能力或健康度展示。
+- N3 规格首轮自动审查发现必须关闭的兼容与可证伪性缺口：schema v2 已持久化的 mood 不能被删除或继续当事实；同毫秒 reversal 必须位于原 settlement 之后；撤销必须立即取消 2 秒庆祝；`motion` 只能沿用 `system | reduced | none`；公平性和 production CSS 不能只做名义断言。
+- 修订后的硬规则是：旧 `CompanionProjection.mood` 永久固定为可忽略的 `idle` 兼容缓存；账本采用 createdAt → settlement/reversal → ID 规范序并拒绝反向时间因果；7/14 日闭区间精确为 D-6…D 与 D-13…D；30 天闭环仿真冻结输入、首选序列、占比和连续上限。
+- 为验证实际 CSS 而非只验证 class，production preview 增加无导航/无写入的 query 验收面，Playwright 对真实 3×4 组件矩阵读取 computed style，并分别验证设置 reduced/none 与系统 prefers-reduced-motion；真实 Android 视觉仍单列 pending 到 N7 总审计。
+- N3 规格第二轮独立审查已批准，首轮七项修订全部关闭且没有新问题；这些规则必须原样进入逐文件计划，不能在实施中用旧持久 mood、`full` motion 或名义 class 测试替代。

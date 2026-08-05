@@ -266,3 +266,5 @@
 - 产品代码 head `908efef` 的 draft PR #1 CI run `30983021203` 全绿（3m35s），完成固定环境、共享/production 验收、Android sync、debug APK、merged manifest/哈希复核和 artifact 上传。artifact `self-improvement-tracker-debug-apk` ID `8920972773`，APK SHA-256 `a3926ce619ae1bd7cf9e026e6d6fab2672a01a71d9720e63da54deb935f8723e`。
 - N2 确定性实现完成并可进入 N3；N0/N1/N2 的 API 33+ 真机/可用模拟器 SQLite、通知、文件选择、强杀恢复与小屏人体工学证据仍明确待补，不能由浏览器或 CI APK 替代。
 - N3 brainstorming 在用户自动决策授权下完成方案收敛：采用无第三方/无二进制的原创 CSS 像素伙伴，ActivityState 只驱动正向视觉氛围，不进入 Roll。已写入 `docs/superpowers/specs/2026-08-05-n3-companion-activity-state-design.md`，下一步执行独立自动规格审查。
+- N3 规格首轮独立审查状态为 Issues Found：2 项事实/兼容边界、2 项时间/撤销因果、1 项不可证伪公平性、1 项 settings 联合类型冲突和 1 项 production CSS/Android 验收缺口。已逐项修订为无 schema 变更的兼容规则、确定账本顺序、撤销即时取消庆祝、精确 UTC 窗口、冻结 30 天阈值与 production computed-style 矩阵；进入第二轮自动审查。
+- N3 规格第二轮独立审查状态为 Approved，无问题；设计冻结完成。下一步按 planning-with-files 回退写逐文件实施计划并独立自动复核，真实 Android 视觉继续标记 `native evidence pending`。

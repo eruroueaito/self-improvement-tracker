@@ -1,6 +1,6 @@
 # N3 完整伙伴反馈与 ActivityStateEngine 设计规格
 
-- Status: Draft — awaiting automated spec review
+- Status: Approved — automated spec review passed in round 2
 - Date: 2026-08-05
 - Scope: N3 完整伙伴反馈、公平性与本地视觉状态
 - Decision authority: 用户已授权普通产品决策自动收敛并自动审查，不再逐项询问
@@ -49,11 +49,13 @@ N3 沿用 schema v2：
 - `CompanionProjection` 继续作为可重建缓存，不能成为第二事实来源；
 - 心情、活动分数和解锁视图不持久化，由 selector 每次从当前快照与显式时间输入派生。
 
+schema v2 已存在的 `CompanionProjection.mood` 是只为旧快照、导入文件和类型形状保留的兼容字段：重建时一律写入 `idle`，导入旧值时允许通过既有校验但运行时完全忽略，UI 只读取 `CompanionView.mood`。N3 不删除、不扩展这个字段，也不让结算命令把 `celebrating` 写回持久快照。
+
 不增加迁移、不修改 SQLite 表结构，也不把 CSS 状态写入导出文件。
 
 ### 3.2 历史最高值
 
-按 `createdAt` 升序、ID 升序重放 RewardLedger：
+RewardLedger 使用以下规范顺序重放，不能依赖数组到达顺序：先按 `createdAt` 升序，同毫秒内先排 `settlement`、再排 `reversal`，同类型最后按 ID 升序。导入校验新增因果约束：`reversal.createdAt >= original.createdAt`；因此同毫秒的原始 settlement 也必定位于它的 reversal 之前。这个规范顺序是现有毫秒级账本能够重建的唯一确定性历史顺序；它不新增字段或 schema 版本。
 
 - `currentXp = max(0, 所有 globalXpDelta 之和)`；
 - `highestXp = max(0, 重放过程中的最高 running XP)`；
@@ -88,9 +90,9 @@ interface ActivityStateV1 {
 
 为避免刷短任务或单一高 rewardWeight 垄断：
 
-1. 使用 UTC day ordinal，避免平台 locale 导致重放不同；
-2. 最近 7 个 UTC 日内，每个有至少一次有效完成的日期计 10 分，同日重复无限次仍只计一次，最多 70 分；
-3. 最近 14 个 UTC 日内，每个出现有效完成的不同 Goal 计 10 分，最多计 3 个 Goal、30 分；
+1. 使用 `currentOrdinal = floor(now / 86_400_000)` 计算 UTC day ordinal，避免平台 locale 导致重放不同；
+2. 最近 7 个 UTC 日是闭区间 `[currentOrdinal - 6, currentOrdinal]`；每个有至少一次有效完成的日期计 10 分，同日重复无限次仍只计一次，最多 70 分；
+3. 最近 14 个 UTC 日是闭区间 `[currentOrdinal - 13, currentOrdinal]`；每个出现有效完成的不同 Goal 计 10 分，最多计 3 个 Goal、30 分；
 4. `score = clamp(recentActivityPoints + breadthPoints, 0, 100)`；
 5. 未来 `settledAt` 不计入，voided/interrupted/abandoned/低于 50% 完成不计入；
 6. rewardWeight、XP、Goal importance 和伙伴状态都不进入算法。
@@ -110,7 +112,7 @@ interface ActivityStateV1 {
 心情优先级：
 
 1. 存在 running/paused Session：`working`；
-2. 最近一条 settlement RewardLedger 距 `now` 不超过 2,000ms：`celebrating`；零 XP 的合法结算也庆祝，reversal 不庆祝；
+2. 取 `createdAt` 位于闭区间 `[now - 2_000, now]` 的最新 settlement；仅当不存在 `createdAt <= now` 且 `reversalOfEntryId` 指向它的 reversal 时为 `celebrating`。零 XP 的合法结算也庆祝；对应 reversal 一出现就立即取消庆祝资格，即使原 settlement 仍在 2 秒窗口内；
 3. `localHour >= 22 || localHour < 7`：`sleeping`；
 4. 其他：`idle`。
 
@@ -139,9 +141,9 @@ interface ActivityStateV1 {
 
 ### 6.3 动效降级
 
-- `motion=full/system`：允许轻微 idle blink 和一次性 celebration，celebration 总时长 <= 2 秒；
+- `motion=system`：仅在操作系统未请求减少动态时允许轻微 idle blink 和一次性 celebration，celebration 总时长 <= 2 秒；
 - `motion=reduced/none`：取消位移、闪烁和循环，只保留静态姿势与“正在专注/刚刚完成”等文字；
-- `prefers-reduced-motion: reduce` 始终关闭动画，即使设置为 full；
+- `prefers-reduced-motion: reduce` 始终关闭动画；`system` 不等于新增的 `full` 设置，N3 不修改 `AppSettings.motion` 联合类型、默认值或导入格式；
 - sleeping/working 默认静态，避免持续吸引注意。
 
 App 只在 `celebratingUntil > now` 时安排一个一次性 `setTimeout` 触发重算，不启用常驻 1 秒全局计时器。
@@ -153,7 +155,8 @@ N3 不把 `activityScore`、mood、stage、level 或 unlocks 传给 `runRollEngi
 自动测试必须证明：
 
 - 相同 Goals/Activities/Sessions/Runs/Context 在计算伙伴视图前后产生字节级等价 RollResult；
-- 30 天固定仿真包含每日学习、隔日健身、偶尔摄影和暂停 Goal；在均可执行窗口内单一 Goal 不长期获得全部选择；暂停 Goal 不入选，恢复期和最近完成惩罚继续生效；
+- 30 天固定闭环仿真从 `2026-01-01T12:00:00Z` 开始，每日运行一次：三个 Goal 分别为学习/健身/摄影，importance 为 5/4/3、desiredCadenceDays 为 1/2/7；每个 Goal 各有一个 15–30 分钟、minimumRestHours=0、energyCost=3、无 context 限制的活动；RollContext 固定为 30 分钟、energy=3、空 contexts；每天执行排序第一的候选并在同日写入一次有效完成，previousRuns 按日累积；摄影在第 10–16 日（含）暂停，第 17 日恢复；
+- 该仿真必须同时断言：第 10–16 日摄影不出现在候选；30 日排序第一的选择中三个 Goal 都至少出现 2 次；任一 Goal 占排序第一选择不超过 60%；同一 Goal 连续位列第一不超过 3 天。固定输入、每日首选 Goal ID 序列和四项汇总值写入快照断言，任何 Roll 规则变化都必须显式更新版本或说明；
 - 同 Goal 同日多次有效完成只增加一个 active day；rewardWeight 不改变 ActivityState；
 - 一分钟任务可记录活动事实但 XP 仍遵守 RewardEngine v1，不通过伙伴获得额外奖励；
 - 重复 settle、撤销重试和请求重放继续依赖既有 idempotency key，不产生重复账目或 unlock。
@@ -177,13 +180,14 @@ N3 不把 `activityScore`、mood、stage、level 或 unlocks 传给 `runRollEngi
 - Reward replay：current/highest、撤销不降 stage/unlock、0 XP settlement；
 - mood 四态优先级与 2,000ms 边界；
 - `CompanionAvatar` 3 × 4 参数矩阵均有唯一 class、状态文字和可访问名称；
-- reduced/none class 不包含必须依赖动画才能理解的内容；
+- reduced/none class 不包含必须依赖动画才能理解的内容；schema v2 的 `system | reduced | none` 三种设置均有组件断言；
 - Roll invariance 与 30 天公平性仿真。
 
 ### 9.2 浏览器/production
 
 - 开发 E2E：开始 Session 后显示 working；结算后 celebrating 且导航可立即点击；2 秒后回到 idle/sleeping；撤销不降已到达阶段和 unlock；
-- production preview：无远程素材请求，CSS 伙伴、状态文字和房间物品正常；
+- production preview：无远程素材请求，CSS 伙伴、状态文字和房间物品正常；使用无导航入口、无持久写入的 `?companion-matrix=1` 验收面渲染真实 `CompanionAvatar` 3 × 4 矩阵；逐项读取 computed style，断言阶段尺寸/叶冠、状态眼睛/手臂/星光/Z 的可见差异；
+- production preview 在 `motion=reduced`、`motion=none` 以及 Playwright `reducedMotion: reduce` 三种路径逐项断言 `animation-name: none` 且动画时长为 `0s`，同时状态文字与可访问名称仍存在；
 - 每条 E2E 继续断言无本机测试源以外请求。
 
 ### 9.3 Android
@@ -197,9 +201,9 @@ N3 不把 `activityScore`、mood、stage、level 或 unlocks 传给 `runRollEngi
 N3 确定性实现完成必须同时满足：
 
 1. ActivityState/Companion selectors 无第二事实来源且无 schema v3；
-2. 3 阶段 × 4 状态全部可访问、全本地、原创并登记许可；
+2. 3 阶段 × 4 状态全部可访问、全本地、原创并登记许可，production matrix 的真实 computed-style 差异测试全绿；
 3. 庆祝 <= 2 秒且不阻塞，reduced/none 与系统减少动态均有等价静态结果；
 4. Roll invariance、30 天公平性和滥用测试全绿；
 5. code-review/simplify 无未关闭 High/Medium；
 6. dev/production E2E、网络扫描、Android build/manifest/hash/artifact 全绿；
-7. 真实 Android 显示证据若仍不可用，明确保持 pending，不影响进入 N4 确定性设计，但不能在 N7 总完成审计中遗漏。
+7. 真实 Android 3 × 4 显示与 reduced-motion 证据若仍不可用，明确保持 pending；它不影响进入 N4 确定性设计，但 N3 只标记“确定性实现完成 / native evidence pending”，且不能在 N7 总完成审计中遗漏。
