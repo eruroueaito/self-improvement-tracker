@@ -254,3 +254,6 @@
 - W3 浏览器红灯最初在旧 Catalog 缺失活动计数处失败；新 UI 后通过真实移动 Edge 的双击创建、写失败保留输入并重试、多 Activity 编辑、归档最后活动、Catalog/Roll 修复提示、恢复与 History 初始筛选全链，1/1 通过且无外网请求。
 - N2/W3 code-review 发现 1 项 Medium 验收缺口：写失败后未直接证明持久快照无半提交；已增加详情无新卡片与 localStorage activities 数量不变断言。simplify 把 Activity 编辑器的三态哨兵替换为显式对象状态，保持新增/编辑/关闭行为不变。
 - N2/W3 收口通过：固定 Node 24 下 TypeScript、16 files/74 tests、3 条移动 Edge E2E、61 产品文件/2 manifest 网络边界、production build、Android cap sync 与 diff check 全绿；临时联合 API 已彻底删除，阶段审查无剩余 High/Medium。
+- N2/W4 已完成确定性 3 Goal/6 Activity fixture、安装/清理应用命令和 DEV-only 显式确认面板；专项 2 files/9 tests 与 2 条 N2 Edge E2E 转绿，覆盖冲突零写入、ID generator 不消耗、混合 Run 净化、幂等清理与重装。
+- W4 code-review 发现并修复 1 项 High 引用完整性风险：只通过 `reversalOfEntryId` 依赖已删除 demo 奖励的账目原本会悬空；现纳入初始删除集并继续执行依赖闭包。simplify 检查保留生成、检测、清理三条窄纯函数边界，不做压缩式重构。
+- N2/W4 收口通过：TypeScript、17 files/78 tests、4 条移动 Edge E2E、64 产品文件/2 manifest 网络边界、production build、Android cap sync 与 diff check 全绿；DEV 面板可安装/清理/重装，production 可达性留给 W5 真实 dist 验证。

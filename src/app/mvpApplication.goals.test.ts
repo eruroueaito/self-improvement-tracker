@@ -165,4 +165,32 @@ describe('MvpApplication Goal and Activity commands', () => {
     expect(app.getSnapshot()).toEqual(runtimeBefore);
     expect(await store.load()).toEqual(persistedBefore);
   });
+
+  it('installs, clears and reinstalls development seed without consuming generated IDs', async () => {
+    const { app, store } = await setup();
+
+    const installed = await app.installDevelopmentSeed();
+    expect(installed).toEqual({ goals: 3, activities: 6 });
+    expect(app.getSnapshot().goals.filter((goal) => goal.id.startsWith('dev-seed:'))).toHaveLength(3);
+    expect(store.replaceCalls).toBe(1);
+
+    const beforeConflict = app.getSnapshot();
+    await expect(app.installDevelopmentSeed()).rejects.toThrow(/开发种子保留 ID 已存在/);
+    expect(store.replaceCalls).toBe(1);
+    expect(app.getSnapshot()).toEqual(beforeConflict);
+
+    const user = await app.createGoal(goalDraft('用户目标'), activityDraft('用户活动'));
+    expect(user.goal.id).toBe('id-1');
+    store.replaceCalls = 0;
+    const removed = await app.clearDevelopmentSeed();
+    expect(removed).toMatchObject({ goals: 3, activities: 6 });
+    expect(app.getSnapshot().goals).toEqual([user.goal]);
+    expect(app.getSnapshot().activities).toEqual([user.activity]);
+    expect(store.replaceCalls).toBe(1);
+
+    await app.clearDevelopmentSeed();
+    expect(store.replaceCalls).toBe(1);
+    await app.installDevelopmentSeed();
+    expect(store.replaceCalls).toBe(2);
+  });
 });

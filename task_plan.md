@@ -53,7 +53,7 @@
 - [x] W1：独立 Goal/Activity 命令与 Roll 空原因
 - [x] W2：Goal Catalog/详情只读 selectors
 - [x] W3：紧凑 Catalog、Goal 详情与多 Activity UI
-- [ ] W4：确定性开发种子与安全清理
+- [x] W4：确定性开发种子与安全清理
 - [ ] W5–W6：E2E、production 边界、审查、简化与完整证据
 - [ ] Goal 详情、多 ActivityTemplate 管理、反馈模型展示和开发种子模式
 - [ ] 验证 5 分钟创建、15 秒 Roll 与全离线体验
@@ -180,6 +180,7 @@
 | W3 E2E 用非精确按钮名“目标”时同时匹配详情页的编辑/状态/历史按钮 | 1 | 将底部导航的 Goal/Roll 定位改为 `exact: true`；此前交互已通过到最后活动归档提示，不修改产品行为 |
 | W3 E2E 在未展开“已归档活动”折叠区时直接点击隐藏的恢复按钮并超时 | 1 | 先通过可见 summary 展开归档区再定位恢复动作，保持规格中的信息层级不变 |
 | W3 全量 E2E 中旧 MVP 流程直接操作已迁入“高级设置”的重要性字段并超时 | 1 | 更新旧验收先展开高级设置；N2 新流程和初始化恢复用例已通过，不回退新信息层级 |
+| W4 检查 Vite 环境声明时误读不存在的 `src/ui/env.d.ts` | 1 | 用 `rg --files src` 定位真实文件为 `src/vite-env.d.ts`，确认已引用 `vite/client`；不再使用错误路径 |
 | 用 PowerShell `foreach` 的语句结果直接接管道检查 `writing-plans` 路径时触发 `An empty pipe element is not allowed` | 1 | 改为在循环内逐行 `Write-Output`；确认两个候选路径均不存在，不再重复原命令 |
 | 按默认 `.codex/skills` 路径运行 `session-catchup.py` 时文件不存在 | 1 | 用 `rg --files` 定位到 `.agents/skills/planning-with-files/planning-with-files/scripts/` 后成功运行 |
 | 用 `rg --files` 查找现有计划/说明文件返回退出码 1 | 1 | 解释为当前空目录中无匹配文件，不重复执行 |

@@ -12,6 +12,7 @@ import { selectGoalCatalogItems } from '../../app/selectors';
 import type { ActivityDraft, GoalDraft } from '../../modules/goals/types';
 import type { AppSettings } from '../../modules/settings/settings';
 import { SettingsPanel } from '../settings/SettingsPanel';
+import { DevelopmentSeedPanel } from './DevelopmentSeedPanel';
 import { GoalForm } from './GoalForm';
 
 export function GoalsScreen(props: {
@@ -24,6 +25,11 @@ export function GoalsScreen(props: {
   onConfirmImport: (contents: string) => Promise<boolean>;
   onSettingsChange: (settings: AppSettings) => Promise<void>;
   onClear: () => Promise<void>;
+  developmentSeed?: {
+    installed: boolean;
+    onInstall: () => Promise<void>;
+    onClear: () => Promise<void>;
+  };
 }) {
   const [createOpen, setCreateOpen] = useState(props.snapshot.goals.length === 0);
   const [pendingImport, setPendingImport] = useState<{ contents: string; preview: ImportPreview } | null>(null);
@@ -90,6 +96,14 @@ export function GoalsScreen(props: {
       <details className="card settings">
         <summary>本地数据与设置</summary>
         <SettingsPanel settings={props.snapshot.settings} busy={props.busy} onChange={props.onSettingsChange} />
+        {props.developmentSeed && (
+          <DevelopmentSeedPanel
+            installed={props.developmentSeed.installed}
+            busy={props.busy}
+            onInstall={props.developmentSeed.onInstall}
+            onClear={props.developmentSeed.onClear}
+          />
+        )}
         <hr />
         <p>导出包含全部目标、专注、历史、奖励和非秘密设置，不包含密钥。</p>
         <div className="actions">

@@ -163,6 +163,8 @@ npm run verify:n0:network
 
 ### W4：确定性开发种子与安全清理
 
+> 实施状态：完成；code-review 修复 1 项 High 引用完整性风险，simplify 完成，TypeScript、17 files/78 tests、4 E2E、build 与 Android cap sync 通过
+
 改动文件：
 
 - 新增 `src/app/developmentSeed.ts`

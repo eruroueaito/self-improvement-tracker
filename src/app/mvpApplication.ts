@@ -32,6 +32,12 @@ import {
 import { migrateSnapshot } from './migrations';
 import type { AppSnapshot, Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort } from './ports';
 import { validateImportEnvelope } from './importValidation';
+import {
+  clearDevelopmentSeedFacts,
+  createDevelopmentSeedFacts,
+  hasDevelopmentSeedFacts,
+  type DevelopmentSeedRemovedCounts,
+} from './developmentSeed';
 
 export interface CreateGoalResult {
   goal: Goal;
@@ -471,6 +477,22 @@ export class MvpApplication {
 
   async clearAllData(): Promise<void> {
     await this.commit(this.emptySnapshot());
+  }
+
+  async installDevelopmentSeed(): Promise<{ goals: number; activities: number }> {
+    const next = this.getSnapshot();
+    if (hasDevelopmentSeedFacts(next)) throw new ValidationError('开发种子保留 ID 已存在，请先清除开发种子');
+    const seed = createDevelopmentSeedFacts(this.clock.now());
+    next.goals.push(...seed.goals);
+    next.activities.push(...seed.activities);
+    await this.commit(next);
+    return { goals: seed.goals.length, activities: seed.activities.length };
+  }
+
+  async clearDevelopmentSeed(): Promise<DevelopmentSeedRemovedCounts> {
+    const result = clearDevelopmentSeedFacts(this.current(), this.clock.now());
+    if (result.changed) await this.commit(result.snapshot);
+    return result.removed;
   }
 
   getElapsedMinutes(sessionId: string): number {

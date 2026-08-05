@@ -85,3 +85,36 @@ test('manages multiple Activities and preserves failed form input offline', asyn
   await expect(page.getByLabel('筛选目标').locator('option:checked')).toHaveText('阅读系统');
   expect(unexpectedNetworkTargets).toEqual([]);
 });
+
+test('installs, clears and reinstalls deterministic development seeds explicitly', async ({ page }) => {
+  const unexpectedNetworkTargets: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (!['127.0.0.1', 'localhost'].includes(url.hostname)) unexpectedNetworkTargets.push(request.url());
+  });
+
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('button', { name: '目标', exact: true }).click();
+  await page.getByText('本地数据与设置').click();
+  await page.getByText('开发种子数据').click();
+  await expect(page.getByText('开发种子未安装')).toBeVisible();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: '安装开发种子' }).click();
+  await expect(page.getByText('已安装 3 个 Goal 和 6 个 Activity 的开发种子。')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '日语学习' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '健身' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '摄影' })).toBeVisible();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: '清除开发种子' }).click();
+  await expect(page.getByRole('heading', { name: '日语学习' })).toHaveCount(0);
+  await expect(page.getByText('开发种子未安装')).toBeVisible();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: '安装开发种子' }).click();
+  await expect(page.getByRole('heading', { name: '日语学习' })).toBeVisible();
+  expect(unexpectedNetworkTargets).toEqual([]);
+});

@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createMvpApplication } from '../../app/composition';
+import { hasDevelopmentSeedFacts } from '../../app/developmentSeed';
 import type { AppSnapshot } from '../../app/ports';
 import type { EmptyRollReason } from '../../modules/recommendations/types';
 import { FocusScreen } from '../focus/FocusScreen';
@@ -210,6 +211,18 @@ export function App() {
               setScreen('goals');
               setNotice('全部本地数据已清空。');
             })}
+            developmentSeed={import.meta.env.DEV ? {
+              installed: hasDevelopmentSeedFacts(snapshot),
+              onInstall: () => executeCommand(async () => {
+                const installed = await application.installDevelopmentSeed();
+                setNotice(`已安装 ${installed.goals} 个 Goal 和 ${installed.activities} 个 Activity 的开发种子。`);
+              }),
+              onClear: () => executeCommand(async () => {
+                const removed = await application.clearDevelopmentSeed();
+                setSelectedGoalId(null);
+                setNotice(`已清除 ${removed.goals} 个 Goal、${removed.activities} 个 Activity 和 ${removed.sessions} 条 demo 专注。`);
+              }),
+            } : undefined}
           />
         )}
 

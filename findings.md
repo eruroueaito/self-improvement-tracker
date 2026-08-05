@@ -273,3 +273,4 @@
 - N2/W2 阶段审查补出反馈反例门槛：progress 与累计次数只接受有效 completed Session；累计分钟接受 settled interrupted 但排除 abandoned。仅测正常完成与撤销无法防止这三条规则在后续重构中被错误合并。
 - N2/W3 表单失败保留不需要复制草稿到 App：让 GoalForm/ActivityForm 持有受控输入，并让命令回调返回 boolean，只有成功才卸载表单即可。同步 `commandInFlight` ref 必须先于 `setBusy` 设置，才能拦截同一渲染帧内的双击。
 - N2/W3 阶段审查要求写失败 E2E 同时观察 UI 与持久事实：仅看到表单仍在不能证明 Store 没有半提交；需直接断言详情未出现新 Activity 且 localStorage 的 activities 数量保持最后成功值。
+- N2/W4 清理必须对 RewardLedger 做引用闭包：不仅移除 demo Goal/Session 的奖励，还要移除 `reversalOfEntryId` 指向保留命名空间或已删除奖励的依赖账目，否则导入校验会把清理结果视为悬空 reversal。
