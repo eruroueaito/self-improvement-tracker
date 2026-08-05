@@ -262,3 +262,6 @@
 - 已新增 production 专用 Playwright config/script，常规 config 明确忽略 production spec；真实 build + preview 遍历 Catalog/详情/Roll/History 后，seed 文案/按钮均不可达，localStorage 不含 `dev-seed:`，1/1 通过且无外网请求。CI 已接入该独立门槛，Android smoke 清单补齐 N2 小屏与多 Activity 项。
 - N2/W5 code-review 无新增发现，simplify 保留 production/dev 两份显式配置和四反馈场景表，不制造跨文件隐藏抽象。完整门槛通过：TypeScript、17 files/78 tests、8 dev E2E、1 production E2E、0 runtime 漏洞、64 产品文件/2 manifest 网络边界、build/cap sync 与 diff check 全绿；远端 PR head-SHA CI 留在 W6 核对。
 - N2/W6 完整 diff code-review 发现 1 项 Medium：归档 Activity 的编辑表单渲染在 active 区，小屏点击后可能离开视口；现按 Activity 归档状态就地渲染，并扩展浏览器用例实际编辑归档项。simplify 把共享表单实例提为单一局部表达式，避免复制命令接线。
+- N2/W6 最终本地审计全绿：TypeScript、17 files/78 tests、8 dev E2E、1 production E2E、0 runtime 漏洞、64 产品文件/2 manifest 网络边界、production build、Android cap sync、smoke runner 与 diff check 均通过；源码无 fetch/XHR/WebSocket 或 secret-shaped 产品字段。
+- 产品代码 head `908efef` 的 draft PR #1 CI run `30983021203` 全绿（3m35s），完成固定环境、共享/production 验收、Android sync、debug APK、merged manifest/哈希复核和 artifact 上传。artifact `self-improvement-tracker-debug-apk` ID `8920972773`，APK SHA-256 `a3926ce619ae1bd7cf9e026e6d6fab2672a01a71d9720e63da54deb935f8723e`。
+- N2 确定性实现完成并可进入 N3；N0/N1/N2 的 API 33+ 真机/可用模拟器 SQLite、通知、文件选择、强杀恢复与小屏人体工学证据仍明确待补，不能由浏览器或 CI APK 替代。

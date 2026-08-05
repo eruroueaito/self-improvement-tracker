@@ -1,6 +1,6 @@
 # N2 离线 Goal Catalog 与多活动实施计划
 
-> 状态：规格与实施计划均通过第二轮自动审查，实施中
+> 状态：确定性实现完成；真实 Android 设备体验证据待补
 >
 > 设计依据：`docs/superpowers/specs/2026-08-05-n2-offline-goal-catalog-design.md`
 >
@@ -244,6 +244,8 @@ npm run cap:sync
 提交：`test: add N2 offline and production acceptance`
 
 ### W6：代码审查、简化、全量证据与阶段提交
+
+> 实施状态：完成；完整 diff 审查修复 1 项 Medium，最终本地门槛全绿，代码 head `908efef` 的 PR CI run `30983021203` 成功并上传 Android debug APK
 
 1. 使用 code-review 审查 W1–W5 的完整 diff，优先检查：
    - Store 失败时内存/持久状态分裂；

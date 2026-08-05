@@ -44,7 +44,7 @@
 - [x] 完成 v1→v2、SQLite 契约、失败注入和秘密排除测试
 - [x] 执行审查、简化、验证与独立提交
 
-### 阶段 13：N2 离线产品能力补全（设计确认中）
+### 阶段 13：N2 离线产品能力补全（确定性实现完成，原生证据待补）
 
 - [x] 完成现有源码、依赖关系、数据流和测试面的确定性接入点审计
 - [x] 用户确认 N2 首要取向为 A：Roll 优先，并授权后续设计决策采用自动化审查
@@ -55,10 +55,10 @@
 - [x] W3：紧凑 Catalog、Goal 详情与多 Activity UI
 - [x] W4：确定性开发种子与安全清理
 - [x] W5：E2E、production artifact 边界与 CI 接线
-- [ ] W6：完整阶段审查、简化、远端 Android CI 与证据收口
+- [x] W6：完整阶段审查、简化、远端 Android CI 与证据收口
 - [x] Goal 详情、多 ActivityTemplate 管理、反馈模型展示和开发种子模式
-- [ ] 验证 5 分钟创建、15 秒 Roll 与全离线体验
-- [ ] 执行审查、简化、验证与独立提交
+- [x] 通过移动浏览器自动闭环验证创建、Roll 响应与全离线体验；真实设备人体工学计时待原生 smoke
+- [x] 执行审查、简化、验证与独立提交
 
 ### 阶段 14：N3 完整伙伴反馈（待开始）
 
@@ -184,6 +184,7 @@
 | W4 检查 Vite 环境声明时误读不存在的 `src/ui/env.d.ts` | 1 | 用 `rg --files src` 定位真实文件为 `src/vite-env.d.ts`，确认已引用 `vite/client`；不再使用错误路径 |
 | W5 四反馈 E2E 首轮中 progress 未创建出可 Roll 的 active Goal，后续候选定位超时 | 1 | 在创建后立即断言对应 Goal 标题以缩短故障位置，并单独复跑 progress 检查表单校验状态；其余三反馈已通过 |
 | W5 审查命令在 PowerShell 中把 `playwright*.ts` 作为 rg 路径，Windows 未展开 glob | 1 | 改为读取明确配置文件并对目录/文件使用 `-g` 或显式路径；审查所需内容已完整读取，不重复无效命令 |
+| W6 用 `gh run view --json artifacts` 查询产物时发现该字段不受支持 | 1 | 改用 GitHub Actions artifacts API 获取 artifact 元数据，并从 run 日志提取 APK SHA-256；run 本身仍用 `gh run view` 核对 conclusion/head SHA |
 | 用 PowerShell `foreach` 的语句结果直接接管道检查 `writing-plans` 路径时触发 `An empty pipe element is not allowed` | 1 | 改为在循环内逐行 `Write-Output`；确认两个候选路径均不存在，不再重复原命令 |
 | 按默认 `.codex/skills` 路径运行 `session-catchup.py` 时文件不存在 | 1 | 用 `rg --files` 定位到 `.agents/skills/planning-with-files/planning-with-files/scripts/` 后成功运行 |
 | 用 `rg --files` 查找现有计划/说明文件返回退出码 1 | 1 | 解释为当前空目录中无匹配文件，不重复执行 |

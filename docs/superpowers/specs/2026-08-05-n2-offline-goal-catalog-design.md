@@ -1,10 +1,10 @@
 # N2 离线 Goal Catalog 与多活动设计规格
 
-- Status: Approved — automated spec review round 2
+- Status: Implemented — deterministic N2 complete; native Android experience evidence pending
 - Date: 2026-08-05
 - Scope: N2 离线产品能力补全
 - Product direction: A — Roll 优先
-- Review record: round 1 issues closed; round 2 approved with no issues or recommendations
+- Review record: round 1 issues closed; round 2 approved; final code review closed 1 High and 3 Medium/Low correctness gaps
 
 ## 1. 背景与决策授权
 

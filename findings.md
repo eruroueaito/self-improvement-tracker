@@ -277,3 +277,4 @@
 - N2/W5 四反馈浏览器验收发现 progress 数字控件与领域契约不一致：`min=0.01` 配默认 step=1 会让整数目标 50 被浏览器判为非法；baseline/target 必须显式 `step="any"` 才能接受领域允许的任意有限进度值。
 - N2 production 边界不能由 `import.meta.env.DEV` 源码条件单独证明；必须用真实 build 后的 `vite preview` 遍历公开导航并观察可访问名称与持久事实。开发服务器 E2E 即使隐藏按钮，也不能替代 production artifact 证据。
 - N2/W6 完整 diff 审查发现归档 Activity 的编辑表单若统一渲染在 active 区，会在移动端出现在当前视口上方，让点击看似无响应；编辑器必须跟随 active/archived 分组就地渲染。
+- N2 最终远端证据链已成立：PR pull_request run 必须与产品代码 head SHA 匹配，并同时通过 production E2E、Android APK 组装、manifest/哈希复核和 artifact 上传；branch push 或仅本地 build 都不能替代这条链。
