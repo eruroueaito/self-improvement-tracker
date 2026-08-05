@@ -65,6 +65,18 @@ npm run test:n0:android-smoke-runner
 - [ ] force-stop / 重启后数据仍在
 - [ ] 飞行模式下完整闭环可用
 
+## N3 伙伴视觉与减少动态
+
+- [ ] API 33+ WebView 中 seed/sprout/companion 三阶段尺寸与叶冠可区分
+- [ ] idle/working/celebrating/sleeping 四状态的眼睛、手臂、星光与 `Z` 静态形态可区分
+- [ ] running/paused Session 顶栏显示 working；0 XP 合法结算也短暂显示 celebrating
+- [ ] celebration 不超过 2 秒、不覆盖 History/Roll 导航；即时撤销立即取消
+- [ ] system 动效克制，reduced/none 与系统“移除动画”均无眨眼、位移或星光动画但保留文字
+- [ ] 320dp 小屏顶栏、expanded Roll hero、房间物品和底部导航无水平溢出或点击遮挡
+- [ ] 50/150/300 历史最高 XP 对应三件房间物品，撤销后阶段与物品不倒退
+
+以上必须由真实模拟器/物理设备截图与交互记录补证；浏览器 production matrix、CI APK 和 fake ADB runner 都不能勾选这些项目。
+
 ## Countdown 与通知
 
 - [ ] API 33+ 允许通知权限时成功排程

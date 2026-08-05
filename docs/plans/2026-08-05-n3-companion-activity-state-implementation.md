@@ -168,6 +168,8 @@ npm run verify:n0:network
 
 ### W4：浏览器 production 样式、滥用与 Android 清单验收
 
+> 实施状态：完成；code-review 无产品缺陷，修正 2 项测试断言与开发 E2E 总预算，simplify 完成，TypeScript、21 files/122 tests、11 dev E2E、4 production E2E、网络边界与 Android cap sync 通过
+
 改动文件：
 
 - 新增 `e2e/n3-companion.spec.ts`

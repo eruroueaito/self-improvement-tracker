@@ -298,3 +298,7 @@
 - W3 的原创伙伴使用单一 13-part DOM 骨架和本地 CSS 变量组合 3 阶段×4 状态；production query 矩阵不初始化 MvpApplication/Store，资产登记明确 MIT、无图片/sprite/Canvas/第三方或远程来源。
 - W3 code-review 发现 1 项 Medium：reduced/none 原先只关闭 `data-part` 节点动画，眨眼实际挂在眼睛子节点而会漏动；关闭规则已扩展到伙伴全部后代与伪元素，等待 W4 computed-style 锁定。
 - 真实 390×844 Edge production 视觉审查确认 hero/顶栏/底部导航不重叠；并修复 2 项 Low：顶栏 `0 XP` 窄屏换行、空活动状态重复“安静陪伴”。最终截图保存在忽略目录 `output/playwright/` 作为本地证据。
+- W4 首次全量 11 条开发 E2E 时，原有 MVP 下载闭环在新增并行负载下恰好触发 Playwright 30 秒文件总预算；相同用例此前单独/8 条套件通过且本轮只在 `download.createReadStream` 被 timeout 取消。开发配置显式提高到 60 秒，不放宽任何操作或 expect 断言。
+- W4 production computed-style 首轮两项失败均为测试解释问题：system 庆祝星光首帧透明度按动画为 0.45 而非恒 1；可见状态标签与 img 可访问名各有三条导致文本计数为 6。修订后仍要求星光 opacity>0、正确动画名和 3 个准确 img，不降低视觉差异门槛。
+- W4 完整浏览器证据确认：0 XP 合法结算庆祝、即时 reversal 取消、正延时 timer 两秒退出；历史 310 XP peak 在 current 0 时仍为 Lv.7/companion/三 unlock；system/reduced/none/OS reduce 的真实后代与伪元素 computed style 符合规则。
+- Android smoke 文档已加入 N3 三阶段×四状态、三 motion 路径、320dp、小屏点击、2 秒庆祝与 peak unlock 清单，并继续声明浏览器矩阵/CI APK/fake ADB 不构成原生视觉证据。
