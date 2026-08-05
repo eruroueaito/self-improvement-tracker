@@ -262,3 +262,7 @@
 - `selectGoalFeedback` 已从 Session/RewardLedger 派生 progress/cumulative/experience，Goal 详情的进度与最近活动应继续从这些事实派生；撤销后显示一致性需要成为 N2 专项回归。
 - 当前唯一阻止 N2 规格冻结的产品决策是详情信息层级：A Roll 优先、B 管理优先或 C 复盘优先。该选择只影响 UI 层级，不改变已确认的数据/应用边界。
 - 自动分析 inventory 把 `.tools/gradle` 缓存计入全仓语言统计，原始文件占比不代表产品源码；N2 分析报告只依据 `src/`、`e2e/`、`android/app`、配置和路线文档。
+- 用户已选择 N2 方案 A（Roll 优先），并进一步要求不再询问普通产品意见，改由 Codex 自主决策与自动化审查；只有外部资产、权限或不可替代的人机验收才需要报告阻塞。
+- N2 自动设计采用“紧凑 Catalog + 独立 Goal 详情”：保留全局 Roll 为默认页和底部中央主入口，Catalog 不展开活动编辑，详情承载 Goal 状态、三种反馈、多活动、归档恢复与最近记录。
+- 最后一条可执行 Activity 允许归档；Goal 可继续 active，但 Catalog/详情必须显示“需要活动”，Roll 把它区分为 `no-active-activities` 并返回可操作提示，不自动暂停或阻止用户操作。
+- N2 不迁移 schema：沿用现有 Goal/Activity 一对多事实集合；新增独立 Goal/Activity 应用命令、只读详情 selectors 和开发种子 fixture。开发种子必须显式触发、使用保留 ID、可清除并重复安装。

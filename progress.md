@@ -230,3 +230,10 @@
 - 分析发现 README 的 Node/npm 与 APK 状态已落后，已同步为固定 Node 24.14.0/npm 11.12.1、远端 CI 已生成 debug APK、真实 API 33+ 设备冒烟仍待补。
 - 生成的 JSON inventory/dependency cache 仅供本地确定性扫描使用并已忽略；只保留可审查的中文 findings/report 进入版本控制。
 - N2 产品取向仍等待用户从 A Roll 优先、B 管理优先、C 复盘优先中确认；在确认前不冻结 UI 规格、不进入实现。
+
+## 2026-08-05 N2 自动设计授权
+
+- 用户选择 A（Roll 优先），随后要求不再询问普通意见，改为自行决策并执行自动化审查；N2 的逐项人工确认和书面复核门槛由独立规格审查、代码审查、测试与 CI 取代。
+- 自动收敛为“紧凑 Catalog + 独立详情 + 全局 Roll 始终一跳可达”，保留快速创建 Goal/首活动，复杂编辑进入详情。
+- 自动选择允许归档最后一条活动并显式显示“需要活动”；不阻止、不自动暂停，Roll 增加独立可操作原因。
+- 开始写入 `docs/superpowers/specs/2026-08-05-n2-offline-goal-catalog-design.md`，提交后按 brainstorming 要求执行最多三轮独立规格审查。
