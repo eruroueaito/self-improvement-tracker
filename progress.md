@@ -241,3 +241,5 @@
 - 已明确 `dev-seed:` 是唯一物理删除例外，ratio 使用 baseline-relative clamp 公式，recent Session 以 ID 次级排序，并新增真实 `dist`/`vite preview` production E2E 门槛；准备第二轮审查。
 - N2 规格第二轮独立审查状态为 Approved，无问题、无建议；规格状态已冻结为自动审查通过。
 - brainstorming 要求的 `writing-plans` 在可用技能清单和标准本地路径中均不存在；按项目强制 planning-with-files 流程生成等价逐文件实施计划，用户已授权无需额外人工复核。
+- N2 实施计划第一轮独立审查状态为 Issues Found：W1 漏迁移旧 `updateGoal` 测试、三反馈撤销覆盖不足、branch push 不触发现有 CI、UI 重复提交/失败保留输入未测试。
+- 已补 W1 文件范围和迁移步骤、每种反馈结算—撤销断言、中央 `commandInFlight` 并发保护与 Storage 失败 E2E，并要求以现有 draft PR 的 pull_request run/head SHA 作为远端 Android 证据；准备第二轮计划审查。

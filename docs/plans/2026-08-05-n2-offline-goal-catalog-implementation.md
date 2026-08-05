@@ -34,6 +34,7 @@ N2 确定性实现完成后，应用应当：
 改动文件：
 
 - 新增 `src/app/mvpApplication.goals.test.ts`
+- 修改 `src/app/mvpApplication.test.ts`
 - 修改 `src/app/mvpApplication.ts`
 - 修改 `src/modules/recommendations/types.ts`
 - 修改 `src/modules/recommendations/rollEngine.ts`
@@ -57,6 +58,7 @@ N2 确定性实现完成后，应用应当：
 3. 新增 `createActivity`、`updateActivity`、`archiveActivity`、`restoreActivity`；归档/恢复请求已满足时直接返回，不调用 Store。
 4. `EmptyRollReason` 增加 `no-active-activities`，并按 active Goal -> available Activity -> time/context/rest 的顺序判断。
 5. `App.tsx` 暂时把旧联合编辑回调接到 `updateGoalAndActivity`；W3 迁移 UI 后删除该临时 API，并用 `rg` 证明无引用。
+6. 把 `src/app/mvpApplication.test.ts` 的旧五参数 `updateGoal` 调用迁移为最终两参数 Goal-only 调用；该测试本来没有改变 Activity 字段，不需要依赖临时联合 API。
 
 验证：
 
@@ -79,10 +81,11 @@ npm run test:run
 
 1. progress feedback 使用 `clamp((value-baseline)/(target-baseline),0,1)`；baseline==target 时 ratio=1。
 2. cumulative times 只计有效完成；minutes 只计 settled 且非 abandoned；experience 汇总 settlement/reversal delta 且展示值不低于 0。
-3. Catalog item 返回 active Activity 数量和 `needsActivity`，不把 archived Activity 计入。
-4. Detail 把 active/archived Activities 分组并按 `createdAt`、ID 稳定排序。
-5. 最近记录只收具有 Settlement 的 Session，按 `settledAt` 降序、ID 升序，最多五条并保留 voided。
-6. selectors 不修改传入快照；重复调用返回等价结果。
+3. 为 progress、cumulative times、cumulative minutes、experience 分别构造“结算前 -> 结算后 -> 撤销/voided 后”断言：前三种在 Session voided 后回退，experience 在 reversal ledger 后回退，避免只验证一种模型替代三种语义。
+4. Catalog item 返回 active Activity 数量和 `needsActivity`，不把 archived Activity 计入。
+5. Detail 把 active/archived Activities 分组并按 `createdAt`、ID 稳定排序。
+6. 最近记录只收具有 Settlement 的 Session，按 `settledAt` 降序、ID 升序，最多五条并保留 voided。
+7. selectors 不修改传入快照；重复调用返回等价结果。
 
 实施步骤：
 
@@ -127,6 +130,7 @@ npm run test:run
 7. `HistoryScreen` 接受一次性 `initialGoalId`；底部直接进入 History 时 App 清空该上下文。
 8. 导入成功、清空全部数据或详情 Goal 消失时清除选择并返回 Catalog。
 9. 迁移完成后删除 `updateGoalAndActivity`，运行 `rg -n "updateGoalAndActivity" src` 必须无匹配。
+10. 为 `App.execute` 增加同步 `commandInFlight` ref：在 React busy 状态渲染前就拒绝第二个并发命令，并在 finally 清除；所有 Goal/Activity/seed 写命令复用该入口。
 
 浏览器验收：
 
@@ -135,6 +139,8 @@ npm run test:run
 - 归档/恢复状态立即反映在 Catalog/详情/Roll。
 - 归档最后一条后同时看到 needsActivity 和 Roll 可操作提示。
 - 详情最近记录与 History 当前 Goal 初始筛选一致。
+- 对保存按钮执行快速双击，断言只创建/更新一次；不能只观察按钮最终 disabled 状态。
+- 在浏览器中注入一次 `Storage.setItem` 失败，断言错误可见、Goal/Activity 表单原输入仍保留、Catalog/持久快照不出现半提交；恢复 Storage 后同一表单可重试成功。
 
 验证：
 
@@ -203,12 +209,14 @@ npm run e2e
 实施步骤：
 
 1. 开发服务器 E2E 覆盖：快速创建、多 Activity、归档/恢复、空原因、三反馈、最近记录、History 过滤、seed 安装/清理/重装。
-2. 每条 E2E 监听 request，断言除本机测试源外没有网络目标。
-3. 正常 Playwright config 用 `testIgnore` 排除 `production.spec.ts`。
-4. production config 先使用 `npm run build` 生成 `dist`，再启动 `vite preview`；只运行 production spec。
-5. production spec 遍历公开导航，断言没有 seed 区/按钮/accessible name；预置无 seed localStorage，断言操作后仍无 `dev-seed:` 事实。
-6. 增加 `preview` 与 `e2e:production` scripts；CI 在常规 E2E 后运行 production E2E。
-7. 更新 Android smoke 人工清单：详情小屏、多个 Activity、最后活动归档提示和三反馈展示；不把浏览器结果当原生证据。
+2. 对 progress、cumulative times、cumulative minutes、experience 每一种模型完成结算后详情断言，再从 History 撤销并断言详情值按各自事实规则回退；不得用 experience 一例代表其他模型。
+3. 增加并发与失败 UI 回归：Goal/Activity/seed 写按钮快速双击只执行一次；Storage 写失败后表单输入保留、快照不变、恢复后可重试。
+4. 每条 E2E 监听 request，断言除本机测试源外没有网络目标。
+5. 正常 Playwright config 用 `testIgnore` 排除 `production.spec.ts`。
+6. production config 先使用 `npm run build` 生成 `dist`，再启动 `vite preview`；只运行 production spec。
+7. production spec 遍历公开导航，断言没有 seed 区/按钮/accessible name；预置无 seed localStorage，断言操作后仍无 `dev-seed:` 事实。
+8. 增加 `preview` 与 `e2e:production` scripts；CI 在常规 E2E 后运行 production E2E。
+9. 更新 Android smoke 人工清单：详情小屏、多个 Activity、最后活动归档提示和三反馈展示；不把浏览器结果当原生证据。
 
 验证：
 
@@ -251,8 +259,9 @@ git diff --check
 
 5. 扫描产品源码，确认没有新 secret-shaped 字段、fetch/XHR/WebSocket 或 INTERNET 权限。
 6. 更新 planning files、规格状态和 N2 证据摘要，形成收口提交：`docs: record deterministic N2 completion`。
-7. 推送 `agent/android-alpha`，等待远端 Android CI 完成 debug APK、manifest/hash 和 artifact 上传。
-8. 只有自动证据全部通过且审查无未关闭高严重度问题时，才标记 N2“确定性实现完成”；真实 Android 设备证据继续单列。
+7. 确认草稿 PR #1 仍以 `agent/android-alpha` 为 head；若 PR 不存在则先创建 draft PR。推送该分支后必须由 pull_request 事件触发 CI，记录与最终 head SHA 一致的 run URL/ID；单独 branch push 不是证据。
+8. 等待远端 Android CI 完成 debug APK、manifest/hash 和 artifact 上传，并用 `gh run view` 核对 conclusion=success 与 head SHA。
+9. 只有自动证据全部通过且审查无未关闭高严重度问题时，才标记 N2“确定性实现完成”；真实 Android 设备证据继续单列。
 
 ## 4. 提交策略
 
