@@ -54,8 +54,9 @@
 - [x] W2：Goal Catalog/详情只读 selectors
 - [x] W3：紧凑 Catalog、Goal 详情与多 Activity UI
 - [x] W4：确定性开发种子与安全清理
-- [ ] W5–W6：E2E、production 边界、审查、简化与完整证据
-- [ ] Goal 详情、多 ActivityTemplate 管理、反馈模型展示和开发种子模式
+- [x] W5：E2E、production artifact 边界与 CI 接线
+- [ ] W6：完整阶段审查、简化、远端 Android CI 与证据收口
+- [x] Goal 详情、多 ActivityTemplate 管理、反馈模型展示和开发种子模式
 - [ ] 验证 5 分钟创建、15 秒 Roll 与全离线体验
 - [ ] 执行审查、简化、验证与独立提交
 
@@ -181,6 +182,8 @@
 | W3 E2E 在未展开“已归档活动”折叠区时直接点击隐藏的恢复按钮并超时 | 1 | 先通过可见 summary 展开归档区再定位恢复动作，保持规格中的信息层级不变 |
 | W3 全量 E2E 中旧 MVP 流程直接操作已迁入“高级设置”的重要性字段并超时 | 1 | 更新旧验收先展开高级设置；N2 新流程和初始化恢复用例已通过，不回退新信息层级 |
 | W4 检查 Vite 环境声明时误读不存在的 `src/ui/env.d.ts` | 1 | 用 `rg --files src` 定位真实文件为 `src/vite-env.d.ts`，确认已引用 `vite/client`；不再使用错误路径 |
+| W5 四反馈 E2E 首轮中 progress 未创建出可 Roll 的 active Goal，后续候选定位超时 | 1 | 在创建后立即断言对应 Goal 标题以缩短故障位置，并单独复跑 progress 检查表单校验状态；其余三反馈已通过 |
+| W5 审查命令在 PowerShell 中把 `playwright*.ts` 作为 rg 路径，Windows 未展开 glob | 1 | 改为读取明确配置文件并对目录/文件使用 `-g` 或显式路径；审查所需内容已完整读取，不重复无效命令 |
 | 用 PowerShell `foreach` 的语句结果直接接管道检查 `writing-plans` 路径时触发 `An empty pipe element is not allowed` | 1 | 改为在循环内逐行 `Write-Output`；确认两个候选路径均不存在，不再重复原命令 |
 | 按默认 `.codex/skills` 路径运行 `session-catchup.py` 时文件不存在 | 1 | 用 `rg --files` 定位到 `.agents/skills/planning-with-files/planning-with-files/scripts/` 后成功运行 |
 | 用 `rg --files` 查找现有计划/说明文件返回退出码 1 | 1 | 解释为当前空目录中无匹配文件，不重复执行 |

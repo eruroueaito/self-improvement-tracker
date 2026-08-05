@@ -11,6 +11,7 @@ const browserChannel = process.env.PLAYWRIGHT_CHANNEL;
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: ['**/production.spec.ts'],
   outputDir: './output/playwright/test-results',
   reporter: [['list']],
   use: {

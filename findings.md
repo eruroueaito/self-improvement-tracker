@@ -274,3 +274,5 @@
 - N2/W3 表单失败保留不需要复制草稿到 App：让 GoalForm/ActivityForm 持有受控输入，并让命令回调返回 boolean，只有成功才卸载表单即可。同步 `commandInFlight` ref 必须先于 `setBusy` 设置，才能拦截同一渲染帧内的双击。
 - N2/W3 阶段审查要求写失败 E2E 同时观察 UI 与持久事实：仅看到表单仍在不能证明 Store 没有半提交；需直接断言详情未出现新 Activity 且 localStorage 的 activities 数量保持最后成功值。
 - N2/W4 清理必须对 RewardLedger 做引用闭包：不仅移除 demo Goal/Session 的奖励，还要移除 `reversalOfEntryId` 指向保留命名空间或已删除奖励的依赖账目，否则导入校验会把清理结果视为悬空 reversal。
+- N2/W5 四反馈浏览器验收发现 progress 数字控件与领域契约不一致：`min=0.01` 配默认 step=1 会让整数目标 50 被浏览器判为非法；baseline/target 必须显式 `step="any"` 才能接受领域允许的任意有限进度值。
+- N2 production 边界不能由 `import.meta.env.DEV` 源码条件单独证明；必须用真实 build 后的 `vite preview` 遍历公开导航并观察可访问名称与持久事实。开发服务器 E2E 即使隐藏按钮，也不能替代 production artifact 证据。

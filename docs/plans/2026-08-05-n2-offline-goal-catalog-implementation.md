@@ -206,6 +206,8 @@ npm run e2e
 
 ### W5：N2 E2E、production 边界与 CI
 
+> 实施状态：完成；code-review 无新增发现，simplify 无需改动，TypeScript、17 files/78 tests、8 dev E2E、1 production E2E、audit、network 与 Android cap sync 通过
+
 改动文件：
 
 - 新增或扩展 `e2e/n2-goal-catalog.spec.ts`

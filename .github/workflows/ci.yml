@@ -72,6 +72,7 @@ jobs:
           npm audit --omit=dev
           npm run verify:n0:network
           npm run e2e
+          npm run e2e:production
 
       - name: Build and sync Android
         run: npm run cap:sync

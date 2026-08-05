@@ -257,3 +257,7 @@
 - N2/W4 已完成确定性 3 Goal/6 Activity fixture、安装/清理应用命令和 DEV-only 显式确认面板；专项 2 files/9 tests 与 2 条 N2 Edge E2E 转绿，覆盖冲突零写入、ID generator 不消耗、混合 Run 净化、幂等清理与重装。
 - W4 code-review 发现并修复 1 项 High 引用完整性风险：只通过 `reversalOfEntryId` 依赖已删除 demo 奖励的账目原本会悬空；现纳入初始删除集并继续执行依赖闭包。simplify 检查保留生成、检测、清理三条窄纯函数边界，不做压缩式重构。
 - N2/W4 收口通过：TypeScript、17 files/78 tests、4 条移动 Edge E2E、64 产品文件/2 manifest 网络边界、production build、Android cap sync 与 diff check 全绿；DEV 面板可安装/清理/重装，production 可达性留给 W5 真实 dist 验证。
+- N2/W5 四反馈 E2E 首轮 3/4 通过并发现 1 项 Medium 产品缺陷：progress 目标值因 HTML 默认 step 与 min 偏移而拒绝整数 50；GoalForm 的 baseline/target 已改为 `step="any"`，等待四场景复验。
+- W5 四反馈复验 4/4 通过：累计次数、累计分钟、数值进度和经验均经创建→Roll→结算→详情→History 撤销→详情回退的隔离浏览器闭环验证。
+- 已新增 production 专用 Playwright config/script，常规 config 明确忽略 production spec；真实 build + preview 遍历 Catalog/详情/Roll/History 后，seed 文案/按钮均不可达，localStorage 不含 `dev-seed:`，1/1 通过且无外网请求。CI 已接入该独立门槛，Android smoke 清单补齐 N2 小屏与多 Activity 项。
+- N2/W5 code-review 无新增发现，simplify 保留 production/dev 两份显式配置和四反馈场景表，不制造跨文件隐藏抽象。完整门槛通过：TypeScript、17 files/78 tests、8 dev E2E、1 production E2E、0 runtime 漏洞、64 产品文件/2 manifest 网络边界、build/cap sync 与 diff check 全绿；远端 PR head-SHA CI 留在 W6 核对。

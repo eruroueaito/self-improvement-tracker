@@ -54,6 +54,11 @@ npm run test:n0:android-smoke-runner
 ## SQLite 与离线闭环
 
 - [ ] 创建 Goal 和 ActivityTemplate
+- [ ] Goal Catalog 在小屏上保持紧凑，详情页可返回且底部 Roll 始终一跳可达
+- [ ] 同一 Goal 新增、编辑、归档和恢复多个 Activity，刷新/重启后字段保持
+- [ ] 归档最后一个 Activity 后，Catalog、详情和 Roll 都显示可操作修复提示
+- [ ] progress、累计次数、累计分钟和 experience 在结算/撤销后显示一致
+- [ ] Goal 详情最近五条记录与 History 初始 Goal 筛选一致
 - [ ] Roll 返回本地候选
 - [ ] Flowtime 结束、手动结算、奖励写入
 - [ ] 撤销后投影一致
