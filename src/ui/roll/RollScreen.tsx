@@ -7,11 +7,14 @@
  */
 import { useState } from 'react';
 import type { AppSnapshot } from '../../app/ports';
+import type { CompanionView } from '../../modules/companion/types';
 import type { RecommendationRun } from '../../modules/recommendations/types';
-import { companionEmoji, reasonLabel } from '../shared/presentation';
+import { CompanionAvatar } from '../companion/CompanionAvatar';
+import { activityStateLabel, companionMoodLabel, companionUnlockLabel, reasonLabel } from '../shared/presentation';
 
 export function RollScreen(props: {
   snapshot: AppSnapshot;
+  companionView: CompanionView;
   currentRun: RecommendationRun | null;
   busy: boolean;
   onRoll: (minutes: number, energy: 1 | 2 | 3 | 4 | 5 | null, contexts: string[]) => Promise<void>;
@@ -21,12 +24,31 @@ export function RollScreen(props: {
   const [minutes, setMinutes] = useState(25);
   const [energy, setEnergy] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
   const [contexts, setContexts] = useState('');
+  const moodLabel = companionMoodLabel(props.companionView.mood);
+  const activityLabel = activityStateLabel(props.companionView.activityState.score);
+  const stateSummary = moodLabel === activityLabel ? moodLabel : `${moodLabel} · ${activityLabel}`;
 
   return (
     <div className="stack">
       <section className="hero card">
-        <span className="hero-companion" aria-hidden="true">{companionEmoji(props.snapshot.companionProjection.evolutionStage)}</span>
-        <div><h2>给现在一个合适的动作</h2><p>排序完全在本机完成。没有随机抽签，也不会调用 AI。</p></div>
+        <div className="companion-hero-scene">
+          <CompanionAvatar
+            stage={props.companionView.projection.evolutionStage}
+            mood={props.companionView.mood}
+            size="expanded"
+            motion={props.snapshot.settings.motion}
+          />
+          <p className="companion-unlock-status">
+            {props.companionView.unlocks.length === 0
+              ? '伙伴解锁逻辑：暂无'
+              : `伙伴解锁逻辑：${props.companionView.unlocks.map(companionUnlockLabel).join('、')}`}
+          </p>
+        </div>
+        <div className="hero-copy">
+          <p className="companion-state-copy">{stateSummary}</p>
+          <h2>给现在一个合适的动作</h2>
+          <p>排序完全在本机完成。伙伴只回应已有记录，不会改变 Roll。</p>
+        </div>
       </section>
       <form className="card roll-form" onSubmit={(event) => { event.preventDefault(); void props.onRoll(minutes, energy, contexts.split(',')); }}>
         <fieldset><legend>可用时间</legend><div className="chips">{[10, 15, 25, 45, 60].map((value) => <button type="button" className={minutes === value ? 'selected' : ''} key={value} onClick={() => setMinutes(value)}>{value} 分</button>)}</div><label>自定义<input type="number" min="1" max="480" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} /></label></fieldset>

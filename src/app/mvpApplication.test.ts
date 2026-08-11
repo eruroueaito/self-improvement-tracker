@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { MemoryStore } from '../adapters/memory/memoryStore';
+import { SessionSecretStore } from '../adapters/secrets/sessionSecretStore';
 import type { Clock, ExportFilePort, IdGenerator, NotificationPort } from './ports';
 import { MvpApplication } from './mvpApplication';
 
@@ -29,7 +30,9 @@ const exportFiles: ExportFilePort = { async save() {} };
 describe('MvpApplication offline loop', () => {
   it('persists a full idempotent loop and restores it through export/import', async () => {
     const clock = new FakeClock();
-    const app = new MvpApplication(new MemoryStore(), clock, new FakeIds(), notifications, exportFiles);
+    const app = new MvpApplication(
+      new MemoryStore(), clock, new FakeIds(), notifications, exportFiles, new SessionSecretStore(),
+    );
     await app.initialize();
     await app.createGoal(
       { title: '阅读', importance: 4, feedback: { type: 'cumulative', unit: 'times' }, defaultEnergyCost: 2 },
@@ -39,8 +42,6 @@ describe('MvpApplication offline loop', () => {
     await app.updateGoal(
       createdSnapshot.goals[0]!.id,
       { title: '阅读计划', importance: 4, feedback: { type: 'cumulative', unit: 'times' }, defaultEnergyCost: 2 },
-      createdSnapshot.activities[0]!.id,
-      { title: '读十页', minimumMinutes: 10, maximumMinutes: 30, energyCost: 2 },
     );
     const rolled = await app.roll({ availableMinutes: 25, energy: 2, contexts: [] });
     const activityId = rolled.run.candidates[0]!.activityTemplateId;
@@ -49,25 +50,62 @@ describe('MvpApplication offline loop', () => {
     await app.end(started.id, 'finish');
     const firstReward = await app.settle(started.id, { actualMinutes: 25, completionRatio: 1, effort: 3, difficulty: 3 });
     const duplicateReward = await app.settle(started.id, { actualMinutes: 25, completionRatio: 1 });
+    const duplicateWithIgnoredInvalidInput = await app.settle(started.id, { actualMinutes: -1, completionRatio: 2 });
     expect(duplicateReward.id).toBe(firstReward.id);
+    expect(duplicateWithIgnoredInvalidInput.id).toBe(firstReward.id);
     expect(app.getSnapshot().companionProjection.globalXp).toBe(21);
+    expect(app.getSnapshot().companionProjection.mood).toBe('idle');
 
+    clock.value = firstReward.createdAt - 1;
     await app.undoSettlement(started.id);
     const duplicateUndo = await app.undoSettlement(started.id);
     expect(duplicateUndo.entryType).toBe('reversal');
+    expect(duplicateUndo.createdAt).toBe(firstReward.createdAt);
     expect(app.getSnapshot().rewardEntries).toHaveLength(2);
     expect(app.getSnapshot().companionProjection.globalXp).toBe(0);
 
     const exported = app.exportData();
     const invalid = JSON.parse(exported);
     invalid.data.activities[0].goalId = 'missing-goal';
-    await expect(app.importData(JSON.stringify(invalid))).rejects.toThrow(/不存在的目标/);
+    expect(() => app.previewImport(JSON.stringify(invalid))).toThrow(/不存在的目标/);
     expect(app.getSnapshot().goals[0]?.title).toBe('阅读计划');
     await app.clearAllData();
     expect(app.getSnapshot().goals).toHaveLength(0);
-    await app.importData(exported);
+    const preview = app.previewImport(exported);
+    expect(preview).toMatchObject({ sourceVersion: 3, goalCount: 1, activityCount: 1, sessionCount: 1, rewardCount: 2 });
+    expect(app.getSnapshot().goals).toHaveLength(0);
+    await app.confirmImport(exported);
     expect(app.getSnapshot().goals[0]?.title).toBe('阅读计划');
     expect(app.getSnapshot().sessions[0]?.status).toBe('voided');
     expect(app.getSnapshot().companionProjection.globalXp).toBe(0);
+  });
+
+  it('does not schedule a new countdown notification when the local policy is disabled', async () => {
+    const clock = new FakeClock();
+    const scheduled: string[] = [];
+    const notificationSpy: NotificationPort = {
+      async scheduleCountdown(sessionId) { scheduled.push(sessionId); },
+      async cancelCountdown() {},
+    };
+    const app = new MvpApplication(
+      new MemoryStore(), clock, new FakeIds(), notificationSpy, exportFiles, new SessionSecretStore(),
+    );
+    await app.initialize();
+    await app.createGoal(
+      { title: '无通知目标', importance: 3, feedback: { type: 'experience' }, defaultEnergyCost: 2 },
+      { title: '无通知活动', minimumMinutes: 10, maximumMinutes: 20, energyCost: 2 },
+    );
+    const settings = app.getSnapshot().settings;
+    settings.notificationsEnabled = false;
+    await app.updateSettings(settings);
+    const rolled = await app.roll({ availableMinutes: 15, energy: 2, contexts: [] });
+    await app.startSession({
+      runId: rolled.run.id,
+      activityId: rolled.run.candidates[0]!.activityTemplateId,
+      timerMode: 'countdown',
+      plannedMinutes: 15,
+    });
+
+    expect(scheduled).toEqual([]);
   });
 });

@@ -29,7 +29,7 @@ export interface RecommendationRun {
   dismissedActivityTemplateIds: string[];
 }
 
-export type EmptyRollReason = 'no-active-goals' | 'time-too-short' | 'context-mismatch' | 'resting';
+export type EmptyRollReason = 'no-active-goals' | 'no-active-activities' | 'time-too-short' | 'context-mismatch' | 'resting';
 
 export interface RollResult {
   run: RecommendationRun;

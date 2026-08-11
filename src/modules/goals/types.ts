@@ -42,7 +42,7 @@ export interface ActivityTemplate {
   archivedAt: number | null;
 }
 
-export interface GoalDraft {
+export interface GoalInput {
   title: string;
   description?: string;
   importance: 1 | 2 | 3 | 4 | 5;
@@ -52,7 +52,7 @@ export interface GoalDraft {
   defaultEnergyCost: 1 | 2 | 3 | 4 | 5;
 }
 
-export interface ActivityDraft {
+export interface ActivityInput {
   title: string;
   description?: string;
   minimumMinutes: number;

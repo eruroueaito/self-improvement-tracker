@@ -10,16 +10,25 @@ import { CryptoIdGenerator, SystemClock } from '../adapters/clock/systemServices
 import { LocalStorageStore } from '../adapters/browser/localStorageStore';
 import { BrowserExportService, NativeExportService } from '../adapters/files/exportServices';
 import { NativeNotificationService, NoopNotificationService } from '../adapters/notifications/notificationServices';
+import { NativeSecretStore } from '../adapters/secrets/nativeSecretStore';
+import { SessionSecretStore } from '../adapters/secrets/sessionSecretStore';
 import { SqliteStore } from '../adapters/sqlite/sqliteStore';
+import { OpenAiCompatibleProvider } from '../adapters/ai/openAiCompatibleProvider';
+import { AiGoalDraftService } from './aiGoalDraftService';
 import { MvpApplication } from './mvpApplication';
 
 export const createMvpApplication = (): MvpApplication => {
   const native = Capacitor.isNativePlatform();
+  const clock = new SystemClock();
+  const ids = new CryptoIdGenerator();
+  const secretStore = native ? new NativeSecretStore() : new SessionSecretStore();
   return new MvpApplication(
     native ? new SqliteStore() : new LocalStorageStore(),
-    new SystemClock(),
-    new CryptoIdGenerator(),
+    clock,
+    ids,
     native ? new NativeNotificationService() : new NoopNotificationService(),
     native ? new NativeExportService() : new BrowserExportService(),
+    secretStore,
+    new AiGoalDraftService(secretStore, new OpenAiCompatibleProvider(), clock, ids),
   );
 };

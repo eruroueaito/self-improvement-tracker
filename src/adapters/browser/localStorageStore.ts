@@ -5,19 +5,19 @@
  * 依赖关系：应用端口、浏览器 Storage API
  * 注意事项：仅用于浏览器开发，不作为 Android SQLite 发布实现
  */
-import type { AppSnapshot, DataStore } from '../../app/ports';
+import type { CurrentAppSnapshot, DataStore, PersistedSnapshot } from '../../app/ports';
 
 const STORAGE_KEY = 'self-improvement-tracker:v1';
 
 export class LocalStorageStore implements DataStore {
   async initialize(): Promise<void> {}
 
-  async load(): Promise<AppSnapshot | null> {
+  async load(): Promise<PersistedSnapshot | null> {
     const value = localStorage.getItem(STORAGE_KEY);
-    return value ? (JSON.parse(value) as AppSnapshot) : null;
+    return value ? (JSON.parse(value) as PersistedSnapshot) : null;
   }
 
-  async replace(snapshot: AppSnapshot): Promise<void> {
+  async replace(snapshot: CurrentAppSnapshot): Promise<void> {
     // 先完成序列化，避免序列化异常时破坏最后一个可读快照。
     const serialized = JSON.stringify(structuredClone(snapshot));
     localStorage.setItem(STORAGE_KEY, serialized);

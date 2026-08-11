@@ -25,3 +25,10 @@ export interface CompanionProjection {
   mood: 'idle' | 'working' | 'celebrating' | 'sleeping';
   lastUpdatedAt: number;
 }
+
+export interface RewardReplayState {
+  currentXp: number;
+  highestXp: number;
+  level: number;
+  evolutionStage: CompanionProjection['evolutionStage'];
+}

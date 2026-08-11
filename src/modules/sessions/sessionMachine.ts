@@ -6,7 +6,7 @@
  * 注意事项：时间回拨不产生负时长，超 24 小时跳变由应用层要求人工确认
  */
 import { ValidationError } from '../goals/validation';
-import type { Session, SessionEndAction, Settlement, SettlementDraft, TimerMode } from './types';
+import type { Session, SessionEndAction, Settlement, SettlementInput, TimerMode } from './types';
 
 const DAY_MS = 86_400_000;
 
@@ -102,7 +102,7 @@ export const recoverSession = (session: Session, now: number): RecoveryResult =>
   return { session, needsTimeConfirmation: jump < 0 };
 };
 
-export const normalizeSettlement = (draft: SettlementDraft): Settlement => {
+export const normalizeSettlement = (draft: SettlementInput): Settlement => {
   if (!Number.isFinite(draft.actualMinutes) || draft.actualMinutes < 0 || draft.actualMinutes > 1440) {
     throw new ValidationError('实际时长必须在 0–1440 分钟之间');
   }

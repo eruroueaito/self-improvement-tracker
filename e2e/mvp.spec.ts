@@ -3,11 +3,17 @@
  * 职责描述：验证创建、Roll、Flowtime、结算、撤销、重载、导出清空和导入的真实 UI 流程
  * 输入/输出：驱动本机 Edge 页面并断言可见状态和下载数据
  * 依赖关系：Playwright Test、运行中的本地 Vite 应用
- * 注意事项：每次测试先清理该测试浏览器上下文的 localStorage，不触碰用户浏览器数据
+ * 注意事项：每次测试清理该上下文的 localStorage，并断言页面没有访问本机测试源之外的网络目标
  */
 import { expect, test } from '@playwright/test';
 
 test('offline MVP loop persists and round-trips all local data', async ({ page }) => {
+  const unexpectedNetworkTargets: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (!['127.0.0.1', 'localhost'].includes(url.hostname)) unexpectedNetworkTargets.push(request.url());
+  });
+
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -15,6 +21,7 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
   await page.getByRole('button', { name: '目标' }).click();
   await page.getByLabel('目标名称').fill('阅读');
   await page.getByLabel('第一个活动').fill('读十页');
+  await page.getByText('高级设置').click();
   await page.getByLabel('重要性').selectOption('4');
   await page.getByLabel('精力消耗').selectOption('2');
   await page.getByRole('button', { name: '保存到本机' }).click();
@@ -42,7 +49,22 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
   await expect(page.getByText('已撤销', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: '目标' }).click();
-  await page.getByText('本地数据与设置').click();
+  await page.getByText('本地数据与设置', { exact: true }).click();
+  await page.getByLabel('主题').selectOption('dark');
+  await page.getByLabel('动态效果').selectOption('reduced');
+  await page.getByLabel('启用触觉策略').uncheck();
+  await page.getByLabel('允许新的倒计时通知').uncheck();
+  await page.getByLabel('启用 AI 功能策略（不含 API 密钥）').check();
+  await page.getByLabel('保存本地 AI 调用历史（可能包含目标原文）').check();
+  await page.reload();
+  await page.getByRole('button', { name: '目标' }).click();
+  await page.getByText('本地数据与设置', { exact: true }).click();
+  await expect(page.getByLabel('主题')).toHaveValue('dark');
+  await expect(page.getByLabel('动态效果')).toHaveValue('reduced');
+  await expect(page.getByLabel('启用触觉策略')).not.toBeChecked();
+  await expect(page.getByLabel('允许新的倒计时通知')).not.toBeChecked();
+  await expect(page.getByLabel('启用 AI 功能策略（不含 API 密钥）')).toBeChecked();
+  await expect(page.getByLabel('保存本地 AI 调用历史（可能包含目标原文）')).toBeChecked();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: '导出 JSON' }).click();
   const download = await downloadPromise;
@@ -50,18 +72,100 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   const exportContents = Buffer.concat(chunks).toString('utf8');
-  expect(JSON.parse(exportContents).format).toBe('self-improvement-tracker');
+  const exported = JSON.parse(exportContents);
+  expect(exported.format).toBe('self-improvement-tracker');
+  expect(exported.version).toBe(3);
+  expect(exported.aiHistoryIncluded).toBe(false);
+  expect(exported.data.settings).toEqual({
+    theme: 'dark',
+    motion: 'reduced',
+    hapticsEnabled: false,
+    notificationsEnabled: false,
+    ai: {
+      enabled: true,
+      goalDraftEnabled: false,
+      historyEnabled: true,
+      provider: {
+        protocol: 'openai-chat-completions',
+        baseUrl: 'https://api.openai.com/v1',
+        model: '',
+        requestTimeoutMs: 30_000,
+        structuredOutputMode: 'json-schema',
+      },
+    },
+  });
+  expect(exported.data.aiInteractions).toEqual([]);
 
   page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: '清空全部本地数据' }).click();
+  await page.getByRole('button', { name: '清空目标、活动与历史（保留 AI 凭据）' }).click();
   await expect(page.getByRole('heading', { name: '阅读' })).toHaveCount(0);
 
-  await page.getByText('本地数据与设置').click();
   await page.locator('input[type="file"]').setInputFiles({
     name: 'backup.json',
     mimeType: 'application/json',
     buffer: Buffer.from(exportContents),
   });
+  await expect(page.getByRole('heading', { name: '确认覆盖本机数据' })).toBeVisible();
+  await expect(page.getByText('v3', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '阅读' })).toHaveCount(0);
+  await page.getByRole('button', { name: '取消' }).click();
+  await expect(page.getByRole('heading', { name: '确认覆盖本机数据' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '阅读' })).toHaveCount(0);
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'backup.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(exportContents),
+  });
+  await page.getByRole('button', { name: '确认导入并覆盖' }).click();
   await expect(page.getByRole('heading', { name: '阅读' })).toBeVisible();
   await expect(page.getByText('导入完成，宠物进度已从奖励账本重建。')).toBeVisible();
+  expect(unexpectedNetworkTargets).toEqual([]);
+});
+
+test('initialization failure offers a sanitized recovery file without clearing local data', async ({ page }) => {
+  const unexpectedNetworkTargets: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (!['127.0.0.1', 'localhost'].includes(url.hostname)) unexpectedNetworkTargets.push(request.url());
+  });
+
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('self-improvement-tracker:v1', JSON.stringify({
+      schemaVersion: 2,
+      goals: [],
+      activities: [],
+      recommendationRuns: [],
+      sessions: [],
+      rewardEntries: [],
+      companionProjection: { globalXp: 0, level: 1, evolutionStage: 'seed', mood: 'idle', lastUpdatedAt: 1 },
+      settings: {
+        theme: 'system',
+        motion: 'system',
+        hapticsEnabled: true,
+        notificationsEnabled: true,
+        ai: { enabled: false, historyEnabled: false, apiKey: 'must-not-export' },
+      },
+    }));
+  });
+  await page.reload();
+
+  await expect(page.getByRole('heading', { name: '无法打开本地数据' })).toBeVisible();
+  await expect(page.getByText(/恢复文件已改用安全默认设置/)).toBeVisible();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: '导出可恢复数据' }).click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const recoveryContents = Buffer.concat(chunks).toString('utf8');
+  expect(recoveryContents).not.toContain('apiKey');
+  expect(recoveryContents).not.toContain('must-not-export');
+  expect(JSON.parse(recoveryContents).data.settings.ai).toEqual({ enabled: false, historyEnabled: false });
+
+  await page.getByRole('button', { name: '重试打开' }).click();
+  await expect(page.getByRole('heading', { name: '无法打开本地数据' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('self-improvement-tracker:v1'))).toContain('must-not-export');
+  expect(unexpectedNetworkTargets).toEqual([]);
 });

@@ -7,7 +7,9 @@
  */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import type { AppSettings } from './modules/settings/settings';
 import { App } from './ui/app/App';
+import { CompanionMatrixScreen } from './ui/companion/CompanionMatrixScreen';
 import './ui/styles.css';
 
 const root = document.getElementById('root');
@@ -16,8 +18,15 @@ if (!root) {
   throw new Error('缺少应用根节点 #root');
 }
 
+const query = new URLSearchParams(window.location.search);
+const motionQuery = query.get('motion');
+const matrixMotion: AppSettings['motion'] = motionQuery === 'reduced' || motionQuery === 'none' ? motionQuery : 'system';
+const content = query.get('companion-matrix') === '1'
+  ? <CompanionMatrixScreen motion={matrixMotion} />
+  : <App />;
+
 createRoot(root).render(
   <StrictMode>
-    <App />
+    {content}
   </StrictMode>,
 );

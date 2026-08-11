@@ -5,17 +5,29 @@
   "description": "A fully local-first self-improvement tracker.",
   "license": "MIT",
   "type": "module",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": "24.14.0",
+    "npm": "11.12.1"
+  },
   "scripts": {
     "dev": "vite",
+    "preview": "vite preview",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "cap:sync": "npm run build && cap sync android"
+    "e2e:production": "playwright test --config=playwright.production.config.ts",
+    "cap:sync": "npm run build && cap sync android",
+    "verify:n0:env": "node scripts/verify-n0-environment.mjs",
+    "verify:n0:network": "node scripts/verify-network-boundary.mjs",
+    "verify:n0:android-smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-android-smoke.ps1",
+    "test:n0:android-smoke-runner": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-android-smoke-runner.ps1"
   },
   "dependencies": {
+    "@aparajita/capacitor-secure-storage": "8.0.0",
     "@capacitor-community/sqlite": "8.1.0",
     "@capacitor/android": "8.5.0",
     "@capacitor/core": "8.5.0",
@@ -23,7 +35,8 @@
     "@capacitor/local-notifications": "8.2.1",
     "@capacitor/share": "8.0.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.0",

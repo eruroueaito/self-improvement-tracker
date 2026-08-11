@@ -5,22 +5,22 @@
  * 依赖关系：应用端口
  * 注意事项：所有边界都深拷贝，避免调用者绕过事务修改状态
  */
-import type { AppSnapshot, DataStore } from '../../app/ports';
+import type { CurrentAppSnapshot, DataStore, PersistedSnapshot } from '../../app/ports';
 
 export class MemoryStore implements DataStore {
-  private snapshot: AppSnapshot | null;
+  private snapshot: PersistedSnapshot | null;
 
-  constructor(initial: AppSnapshot | null = null) {
+  constructor(initial: PersistedSnapshot | null = null) {
     this.snapshot = initial ? structuredClone(initial) : null;
   }
 
   async initialize(): Promise<void> {}
 
-  async load(): Promise<AppSnapshot | null> {
+  async load(): Promise<PersistedSnapshot | null> {
     return this.snapshot ? structuredClone(this.snapshot) : null;
   }
 
-  async replace(snapshot: AppSnapshot): Promise<void> {
+  async replace(snapshot: CurrentAppSnapshot): Promise<void> {
     this.snapshot = structuredClone(snapshot);
   }
 }

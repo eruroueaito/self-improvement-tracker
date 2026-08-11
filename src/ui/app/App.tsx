@@ -5,21 +5,27 @@
  * 依赖关系：React、应用门面、Goals/Roll/Focus/Settlement/History 页面
  * 注意事项：UI 不直接访问数据库；跨模块状态只通过应用门面改变
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { selectCompanionRefreshDelay, selectCompanionView } from '../../app/companionSelectors';
 import { createMvpApplication } from '../../app/composition';
+import { hasDevelopmentSeedFacts } from '../../app/developmentSeed';
 import type { AppSnapshot } from '../../app/ports';
+import type { EmptyRollReason } from '../../modules/recommendations/types';
+import { CompanionAvatar } from '../companion/CompanionAvatar';
 import { FocusScreen } from '../focus/FocusScreen';
+import { GoalDetailScreen } from '../goals/GoalDetailScreen';
 import { GoalsScreen } from '../goals/GoalsScreen';
 import { HistoryScreen } from '../history/HistoryScreen';
 import { RollScreen } from '../roll/RollScreen';
 import { SettlementScreen } from '../settlement/SettlementScreen';
-import { companionEmoji } from '../shared/presentation';
+import { RecoveryScreen } from './RecoveryScreen';
 
 type Tab = 'goals' | 'roll' | 'history';
-type Screen = Tab | 'focus' | 'settlement';
+type Screen = Tab | 'goal-detail' | 'focus' | 'settlement';
 
-const EMPTY_REASON: Record<string, string> = {
+const EMPTY_REASON: Record<EmptyRollReason, string> = {
   'no-active-goals': '先创建并启用一个目标与活动。',
+  'no-active-activities': '当前目标没有可用活动，请先添加或恢复一个活动。',
   'time-too-short': '当前时间少于所有活动的最短时长。',
   'context-mismatch': '当前场景不满足活动要求。',
   resting: '匹配的活动仍在恢复期，稍后再试。',
@@ -28,31 +34,45 @@ const EMPTY_REASON: Record<string, string> = {
 export function App() {
   const application = useMemo(() => createMvpApplication(), []);
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
+  const [credentialsConfigured, setCredentialsConfigured] = useState(false);
   const [screen, setScreen] = useState<Screen>('roll');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [initialHistoryGoalId, setInitialHistoryGoalId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [tick, setTick] = useState(0);
+  const [, setCompanionTick] = useState(0);
   const recoveryInFlight = useRef(false);
+  const commandInFlight = useRef(false);
 
   const refresh = (): void => setSnapshot(application.getSnapshot());
 
-  useEffect(() => {
-    void application.initialize().then((initial) => {
+  const openApplication = useCallback(async (): Promise<void> => {
+    setInitializing(true);
+    setError(null);
+    try {
+      const initial = await application.initialize();
       setSnapshot(initial);
       const active = initial.sessions.find((session) => session.status === 'running' || session.status === 'paused');
       const ended = initial.sessions.find((session) => session.status === 'ended');
-      if (active) {
-        setActiveSessionId(active.id);
-        setScreen('focus');
-      } else if (ended) {
-        setActiveSessionId(ended.id);
-        setScreen('settlement');
-      }
-    }).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : '应用初始化失败'));
+      setActiveSessionId(active?.id ?? ended?.id ?? null);
+      setCurrentRunId(null);
+      setSelectedGoalId(null);
+      setInitialHistoryGoalId(null);
+      setScreen(active ? 'focus' : ended ? 'settlement' : 'roll');
+    } catch (cause) {
+      setSnapshot(null);
+      setError(cause instanceof Error ? cause.message : '应用初始化失败');
+    } finally {
+      setInitializing(false);
+    }
   }, [application]);
+
+  useEffect(() => { void openApplication(); }, [openApplication]);
 
   useEffect(() => {
     if (screen !== 'focus') return;
@@ -74,20 +94,75 @@ export function App() {
       .finally(() => { recoveryInFlight.current = false; });
   }, [activeSessionId, application, screen, snapshot, tick]);
 
-  const execute = async (operation: () => Promise<void>): Promise<void> => {
+  useEffect(() => {
+    if (!snapshot || !selectedGoalId || snapshot.goals.some((goal) => goal.id === selectedGoalId)) return;
+    setSelectedGoalId(null);
+    if (screen === 'goal-detail') setScreen('goals');
+  }, [screen, selectedGoalId, snapshot]);
+
+  const companionNow = Date.now();
+  const companionView = snapshot
+    ? selectCompanionView(snapshot, { now: companionNow, localHour: new Date(companionNow).getHours() })
+    : null;
+  const companionRefreshDelay = selectCompanionRefreshDelay(companionView?.celebratingUntil ?? null, companionNow);
+
+  useEffect(() => {
+    if (companionRefreshDelay === null) return;
+    const timeoutId = window.setTimeout(() => setCompanionTick((value) => value + 1), companionRefreshDelay);
+    return () => window.clearTimeout(timeoutId);
+  }, [companionRefreshDelay, companionView?.celebratingUntil]);
+
+  const execute = async (operation: () => Promise<void>): Promise<boolean> => {
+    if (commandInFlight.current) return false;
+    commandInFlight.current = true;
     setBusy(true);
     setError(null);
     try {
       await operation();
       refresh();
+      return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '操作失败');
+      return false;
     } finally {
+      commandInFlight.current = false;
       setBusy(false);
     }
   };
+  const executeCommand = async (operation: () => Promise<void>): Promise<void> => {
+    await execute(operation);
+  };
 
-  if (!snapshot) return <main className="loading" aria-live="polite">正在打开本地数据…</main>;
+  useEffect(() => {
+    if (!snapshot) return;
+    let active = true;
+    void application.hasProviderCredentials()
+      .then((configured) => { if (active) setCredentialsConfigured(configured); })
+      .catch(() => { if (active) setCredentialsConfigured(false); });
+    return () => { active = false; };
+  }, [application, snapshot?.settings.ai.provider.baseUrl, snapshot?.settings.ai.provider.protocol]);
+
+  if (!snapshot) {
+    if (initializing) return <main className="loading" aria-live="polite">正在打开本地数据…</main>;
+    return (
+      <RecoveryScreen
+        error={error ?? '应用初始化失败'}
+        recovery={application.getRecoveryExportStatus()}
+        busy={busy}
+        onRetry={openApplication}
+        onExportRecovery={async () => {
+          setBusy(true);
+          try {
+            await application.exportRecoveryToFile();
+          } catch (cause) {
+            setError(cause instanceof Error ? cause.message : '恢复数据导出失败');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    );
+  }
 
   const currentRun = currentRunId
     ? snapshot.recommendationRuns.find((run) => run.id === currentRunId) ?? null
@@ -96,6 +171,8 @@ export function App() {
     ? snapshot.sessions.find((candidate) => candidate.id === activeSessionId) ?? null
     : null;
   const navigate = (tab: Tab): void => {
+    setSelectedGoalId(null);
+    if (tab === 'history') setInitialHistoryGoalId(null);
     setScreen(tab);
     setError(null);
   };
@@ -105,12 +182,16 @@ export function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">SELF IMPROVEMENT TRACKER</p>
-          <h1>{screen === 'focus' ? '专注' : screen === 'settlement' ? '结算' : screen === 'goals' ? '目标' : screen === 'history' ? '历史' : '现在做什么？'}</h1>
+          <h1>{screen === 'focus' ? '专注' : screen === 'settlement' ? '结算' : screen === 'goal-detail' ? '目标详情' : screen === 'goals' ? '目标' : screen === 'history' ? '历史' : '现在做什么？'}</h1>
         </div>
-        <div className="companion" aria-label={`伙伴等级 ${snapshot.companionProjection.level}，${snapshot.companionProjection.globalXp} XP`}>
-          <span aria-hidden="true">{companionEmoji(snapshot.companionProjection.evolutionStage)}</span>
-          <b>Lv.{snapshot.companionProjection.level}</b>
-          <small>{snapshot.companionProjection.globalXp} XP</small>
+        <div className="companion-summary">
+          <CompanionAvatar
+            stage={companionView!.projection.evolutionStage}
+            mood={companionView!.mood}
+            size="compact"
+            motion={snapshot.settings.motion}
+          />
+          <span className="companion-level"><b>Lv.{companionView!.projection.level}</b><small>{companionView!.projection.currentXp} XP</small></span>
         </div>
       </header>
 
@@ -126,40 +207,165 @@ export function App() {
               await application.createGoal(goal, activity);
               setNotice('目标和第一个活动已保存在本机。');
             })}
-            onUpdate={(goalId, goal, activityId, activity) => execute(async () => {
-              await application.updateGoal(goalId, goal, activityId, activity);
-              setNotice('目标和活动已更新。');
-            })}
-            onStatus={(id, status) => execute(() => application.setGoalStatus(id, status))}
-            onExport={() => execute(() => application.exportToFile())}
-            onImport={(contents) => execute(async () => {
-              await application.importData(contents);
+            onOpenGoal={(goalId) => {
+              setSelectedGoalId(goalId);
+              setScreen('goal-detail');
+              setError(null);
+            }}
+            onExport={(includeAiHistory) => executeCommand(() => application.exportToFile({ includeAiHistory }))}
+            onPreviewImport={(contents) => application.previewImport(contents)}
+            onConfirmImport={(contents) => execute(async () => {
+              await application.confirmImport(contents);
+              const imported = application.getSnapshot();
+              const active = imported.sessions.find((session) => session.status === 'running' || session.status === 'paused');
+              const ended = imported.sessions.find((session) => session.status === 'ended');
+              setCurrentRunId(null);
+              setActiveSessionId(active?.id ?? ended?.id ?? null);
+              setSelectedGoalId(null);
+              setInitialHistoryGoalId(null);
+              setScreen(active ? 'focus' : ended ? 'settlement' : 'goals');
               setNotice('导入完成，宠物进度已从奖励账本重建。');
             })}
-            onClear={() => execute(async () => {
-              if (!window.confirm('确定清空全部本地目标、专注、历史和奖励吗？此操作不能撤销。')) return;
+            onSettingsChange={(settings) => execute(async () => {
+              await application.updateSettings(settings);
+              setNotice('设置已保存在本机。');
+            })}
+            onClear={() => executeCommand(async () => {
+              if (!window.confirm('确定清空本机目标、活动、专注、奖励和 AI 历史吗？已保存的 AI 凭据会保留，删除凭据需使用独立按钮。')) return;
               await application.clearAllData();
               setCurrentRunId(null);
-              setNotice('全部本地数据已清空。');
+              setSelectedGoalId(null);
+              setInitialHistoryGoalId(null);
+              setScreen('goals');
+              setNotice('目标、活动与历史已清空；AI 凭据仍保留。');
             })}
+            aiSettings={{
+              credentialsConfigured,
+              onSaveCredentials: (credentials) => execute(async () => {
+                await application.saveProviderCredentials(credentials);
+                setCredentialsConfigured(true);
+                setNotice('AI 凭据已安全保存。');
+              }),
+              onDeleteCredentials: () => execute(async () => {
+                await application.deleteProviderCredentials();
+                setCredentialsConfigured(false);
+                setNotice('AI 凭据已删除。');
+              }),
+              onTestConnection: async (input) => {
+                if (commandInFlight.current) return { ok: false, error: 'cancelled' };
+                commandInFlight.current = true;
+                setBusy(true);
+                setError(null);
+                try {
+                  return await application.testAiProviderConnection(input);
+                } catch {
+                  setError('连接测试失败');
+                  return { ok: false, error: 'unavailable' };
+                } finally {
+                  commandInFlight.current = false;
+                  setBusy(false);
+                }
+              },
+              onClearHistory: () => execute(async () => {
+                await application.clearAiHistory();
+                setNotice('AI 历史已清空，凭据未改变。');
+              }),
+              onGenerate: async (input, signal) => {
+                if (commandInFlight.current) {
+                  return { ok: false, error: 'cancelled', interactionCandidate: null, historyWarning: null };
+                }
+                commandInFlight.current = true;
+                setBusy(true);
+                setError(null);
+                try {
+                  const outcome = await application.generateAiGoalDraft(input, signal);
+                  refresh();
+                  if (outcome.historyWarning) setNotice(`草稿已返回，但 AI 历史记录出现警告：${outcome.historyWarning}`);
+                  return outcome;
+                } catch {
+                  setError('AI GoalDraft 生成失败');
+                  return { ok: false, error: 'unavailable', interactionCandidate: null, historyWarning: null };
+                } finally {
+                  commandInFlight.current = false;
+                  setBusy(false);
+                }
+              },
+              onConfirmDraft: (goal, activities) => execute(async () => {
+                await application.createGoalWithActivities(goal, activities);
+                setNotice(`AI 草稿已确认：1 个目标和 ${activities.length} 个活动保存在本机。`);
+              }),
+            }}
+            developmentSeed={import.meta.env.DEV ? {
+              installed: hasDevelopmentSeedFacts(snapshot),
+              onInstall: () => executeCommand(async () => {
+                const installed = await application.installDevelopmentSeed();
+                setNotice(`已安装 ${installed.goals} 个 Goal 和 ${installed.activities} 个 Activity 的开发种子。`);
+              }),
+              onClear: () => executeCommand(async () => {
+                const removed = await application.clearDevelopmentSeed();
+                setSelectedGoalId(null);
+                setNotice(`已清除 ${removed.goals} 个 Goal、${removed.activities} 个 Activity 和 ${removed.sessions} 条 demo 专注。`);
+              }),
+            } : undefined}
+          />
+        )}
+
+        {screen === 'goal-detail' && selectedGoalId && (
+          <GoalDetailScreen
+            snapshot={snapshot}
+            goalId={selectedGoalId}
+            busy={busy}
+            onBack={() => {
+              setSelectedGoalId(null);
+              setScreen('goals');
+            }}
+            onUpdateGoal={(goalId, draft) => execute(async () => {
+              await application.updateGoal(goalId, draft);
+              setNotice('目标已更新。');
+            })}
+            onStatus={(goalId, status) => executeCommand(async () => {
+              await application.setGoalStatus(goalId, status);
+              setNotice('目标状态已更新。');
+            })}
+            onCreateActivity={(goalId, draft) => execute(async () => {
+              await application.createActivity(goalId, draft);
+              setNotice('活动已添加。');
+            })}
+            onUpdateActivity={(goalId, activityId, draft) => execute(async () => {
+              await application.updateActivity(goalId, activityId, draft);
+              setNotice('活动已更新。');
+            })}
+            onArchiveActivity={(goalId, activityId) => executeCommand(async () => {
+              await application.archiveActivity(goalId, activityId);
+              setNotice('活动已归档，可随时恢复。');
+            })}
+            onRestoreActivity={(goalId, activityId) => executeCommand(async () => {
+              await application.restoreActivity(goalId, activityId);
+              setNotice('活动已恢复并可参与 Roll。');
+            })}
+            onOpenHistory={(goalId) => {
+              setInitialHistoryGoalId(goalId);
+              setScreen('history');
+            }}
           />
         )}
 
         {screen === 'roll' && (
           <RollScreen
             snapshot={snapshot}
+            companionView={companionView!}
             currentRun={currentRun}
             busy={busy}
-            onRoll={(availableMinutes, energy, contexts) => execute(async () => {
+            onRoll={(availableMinutes, energy, contexts) => executeCommand(async () => {
               const result = await application.roll({ availableMinutes, energy, contexts });
               setCurrentRunId(result.run.id);
-              setNotice(result.emptyReason ? (EMPTY_REASON[result.emptyReason] ?? '当前没有合适候选。') : null);
+              setNotice(result.emptyReason ? EMPTY_REASON[result.emptyReason] : null);
             })}
-            onDismiss={(runId, activityId) => execute(async () => {
+            onDismiss={(runId, activityId) => executeCommand(async () => {
               await application.dismissRecommendation(runId, activityId);
               setNotice('已记录“暂不想做”，24 小时内会降低它的排序。');
             })}
-            onStart={(runId, activityId, mode, minutes) => execute(async () => {
+            onStart={(runId, activityId, mode, minutes) => executeCommand(async () => {
               const started = await application.startSession({ runId, activityId, timerMode: mode, plannedMinutes: minutes });
               setActiveSessionId(started.id);
               setScreen('focus');
@@ -175,9 +381,9 @@ export function App() {
             elapsedMinutes={application.getElapsedMinutes(session.id)}
             activityTitle={snapshot.activities.find((activity) => activity.id === session.activityTemplateId)?.title ?? '专注活动'}
             busy={busy}
-            onPause={() => execute(async () => { await application.pause(session.id); })}
-            onResume={() => execute(async () => { await application.resume(session.id); })}
-            onEnd={(action) => execute(async () => {
+            onPause={() => executeCommand(async () => { await application.pause(session.id); })}
+            onResume={() => executeCommand(async () => { await application.resume(session.id); })}
+            onEnd={(action) => executeCommand(async () => {
               await application.end(session.id, action);
               refresh();
               setScreen('settlement');
@@ -190,7 +396,7 @@ export function App() {
             session={session}
             goal={snapshot.goals.find((goal) => goal.id === session.goalId)}
             busy={busy}
-            onSettle={(draft) => execute(async () => {
+            onSettle={(draft) => executeCommand(async () => {
               const reward = await application.settle(session.id, draft);
               setNotice(`结算完成：+${reward.globalXpDelta} XP`);
               setActiveSessionId(null);
@@ -201,20 +407,22 @@ export function App() {
 
         {screen === 'history' && (
           <HistoryScreen
+            key={initialHistoryGoalId ?? 'all'}
             snapshot={snapshot}
             busy={busy}
-            onUndo={(sessionId) => execute(async () => {
+            initialGoalId={initialHistoryGoalId}
+            onUndo={(sessionId) => executeCommand(async () => {
               await application.undoSettlement(sessionId);
               setNotice('已撤销结算并写入反向奖励账目，历史记录仍保留。');
             })}
-            onNote={(sessionId, note) => execute(() => application.updateSessionNote(sessionId, note))}
+            onNote={(sessionId, note) => executeCommand(() => application.updateSessionNote(sessionId, note))}
           />
         )}
       </main>
 
-      {(screen === 'goals' || screen === 'roll' || screen === 'history') && (
+      {(screen === 'goals' || screen === 'goal-detail' || screen === 'roll' || screen === 'history') && (
         <nav className="bottom-nav" aria-label="主导航">
-          <button className={screen === 'goals' ? 'active' : ''} onClick={() => navigate('goals')}>目标</button>
+          <button className={screen === 'goals' || screen === 'goal-detail' ? 'active' : ''} onClick={() => navigate('goals')}>目标</button>
           <button className={screen === 'roll' ? 'active primary-tab' : 'primary-tab'} onClick={() => navigate('roll')}>Roll</button>
           <button className={screen === 'history' ? 'active' : ''} onClick={() => navigate('history')}>历史</button>
         </nav>

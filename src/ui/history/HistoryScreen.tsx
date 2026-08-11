@@ -11,10 +11,11 @@ import type { AppSnapshot } from '../../app/ports';
 export function HistoryScreen(props: {
   snapshot: AppSnapshot;
   busy: boolean;
+  initialGoalId?: string | null;
   onUndo: (sessionId: string) => Promise<void>;
   onNote: (sessionId: string, note: string) => Promise<void>;
 }) {
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(props.initialGoalId ?? 'all');
   const [notes, setNotes] = useState<Record<string, string>>({});
   const sessions = props.snapshot.sessions
     .filter((session) => session.settlement && (filter === 'all' || session.goalId === filter))
