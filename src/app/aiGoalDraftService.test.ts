@@ -160,4 +160,38 @@ describe('AiGoalDraftService', () => {
       interactionCandidate: { result: 'invalid-response', validatedOutput: null },
     });
   });
+
+  it('tests a connection with one-time credentials without reading SecretStore or creating history', async () => {
+    const { service, provider, secrets, ids } = setup(async () => ({ ok: true }));
+    await expect(service.testConnection({
+      settings: enabledSettings().ai.provider,
+      credentials: { apiKey: 'one-time-fixture', customHeaders: { 'x-tenant': 'fixture' } },
+      signal: new AbortController().signal,
+    })).resolves.toEqual({ ok: true });
+    expect(secrets.readProviderCredentials).not.toHaveBeenCalled();
+    expect(provider.completeStructured).toHaveBeenCalledWith(expect.objectContaining({
+      task: { type: 'connection-test' },
+      credentials: expect.objectContaining({
+        binding: { protocol: 'openai-chat-completions', baseUrl: 'https://provider.invalid/v1' },
+        apiKey: 'one-time-fixture',
+      }),
+    }));
+    expect(ids.next).not.toHaveBeenCalled();
+  });
+
+  it('uses endpoint-bound stored credentials for connection testing and maps missing credentials', async () => {
+    const configured = setup(async () => ({ ok: true }));
+    await expect(configured.service.testConnection({
+      settings: enabledSettings().ai.provider,
+      signal: new AbortController().signal,
+    })).resolves.toEqual({ ok: true });
+    expect(configured.secrets.readProviderCredentials).toHaveBeenCalledTimes(1);
+
+    vi.mocked(configured.secrets.readProviderCredentials).mockResolvedValueOnce(null);
+    await expect(configured.service.testConnection({
+      settings: enabledSettings().ai.provider,
+      signal: new AbortController().signal,
+    })).resolves.toEqual({ ok: false, error: 'not-configured' });
+    expect(configured.provider.completeStructured).toHaveBeenCalledTimes(1);
+  });
 });

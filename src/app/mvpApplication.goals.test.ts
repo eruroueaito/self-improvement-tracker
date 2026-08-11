@@ -109,6 +109,40 @@ describe('MvpApplication Goal and Activity commands', () => {
     expect(app.getSnapshot()).toEqual(before);
   });
 
+  it('creates 1–5 Activities with one atomic replace and validates all inputs before consuming IDs', async () => {
+    const { app, store } = await setup();
+    await expect(app.createGoalWithActivities(goalInput('无活动'), [])).rejects.toThrow(/1–5/);
+    await expect(app.createGoalWithActivities(
+      goalInput('坏活动'),
+      [activityInput('合法'), { ...activityInput('非法'), minimumMinutes: 40, maximumMinutes: 20 }],
+    )).rejects.toThrow();
+    expect(store.replaceCalls).toBe(0);
+
+    const created = await app.createGoalWithActivities(
+      goalInput('多活动目标'),
+      Array.from({ length: 5 }, (_, index) => activityInput(`活动 ${index + 1}`)),
+    );
+    expect(created.goal.id).toBe('id-1');
+    expect(created.activities.map((activity) => activity.id)).toEqual(['id-2', 'id-3', 'id-4', 'id-5', 'id-6']);
+    expect(new Set(created.activities.map((activity) => activity.goalId))).toEqual(new Set(['id-1']));
+    expect(store.replaceCalls).toBe(1);
+    expect(app.getSnapshot()).toMatchObject({ goals: [{ id: 'id-1' }] });
+    expect(app.getSnapshot().activities).toHaveLength(5);
+  });
+
+  it('does not expose a half-created Goal when the multi-Activity replace fails', async () => {
+    const { app, store } = await setup();
+    const before = app.getSnapshot();
+    store.failNextReplace = true;
+
+    await expect(app.createGoalWithActivities(
+      goalInput('原子目标'),
+      [activityInput('活动一'), activityInput('活动二')],
+    )).rejects.toThrow('replace failed');
+    expect(app.getSnapshot()).toEqual(before);
+    expect(await store.load()).toEqual(before);
+  });
+
   it('rejects cross-Goal updates and preserves immutable Activity fields', async () => {
     const { app, clock, store } = await setup();
     const first = await app.createGoal(goalInput('目标一'), activityInput('活动一'));

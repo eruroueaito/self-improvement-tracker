@@ -50,7 +50,9 @@ describe('MvpApplication offline loop', () => {
     await app.end(started.id, 'finish');
     const firstReward = await app.settle(started.id, { actualMinutes: 25, completionRatio: 1, effort: 3, difficulty: 3 });
     const duplicateReward = await app.settle(started.id, { actualMinutes: 25, completionRatio: 1 });
+    const duplicateWithIgnoredInvalidInput = await app.settle(started.id, { actualMinutes: -1, completionRatio: 2 });
     expect(duplicateReward.id).toBe(firstReward.id);
+    expect(duplicateWithIgnoredInvalidInput.id).toBe(firstReward.id);
     expect(app.getSnapshot().companionProjection.globalXp).toBe(21);
     expect(app.getSnapshot().companionProjection.mood).toBe('idle');
 

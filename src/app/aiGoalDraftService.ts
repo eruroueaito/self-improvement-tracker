@@ -6,6 +6,10 @@
  * 注意事项：只有实际 POST 的非取消结果可生成 history candidate；history 关闭时不分配 ID、不克隆输出
  */
 import { AiOperationError, type ProviderErrorCode } from '../adapters/ai/openAiCompatibleProvider';
+import {
+  normalizeProviderCredentials,
+  type ProviderCredentials,
+} from '../modules/ai/credentials';
 import { AiGoalDraftSchema, type AiGoalDraft } from '../modules/ai/goalDraftSchema';
 import {
   AiInteractionLogSchema,
@@ -13,6 +17,8 @@ import {
   type AiInteractionLog,
 } from '../modules/ai/interactionLog';
 import type { AiInteractionResult } from '../modules/ai/types';
+import { normalizeAiProviderSettings } from '../modules/ai/providerConfig';
+import type { AiProviderSettings } from '../modules/ai/types';
 import { normalizeAppSettings, type AppSettings } from '../modules/settings/settings';
 import type { Clock, IdGenerator, ProviderAdapter, SecretStore } from './ports';
 
@@ -32,6 +38,24 @@ export interface GenerateAiGoalDraftInput {
   settings: AppSettings;
   input: string;
   signal: AbortSignal;
+}
+
+export interface AiGoalDraftGenerator {
+  generate(input: GenerateAiGoalDraftInput): Promise<AiGoalDraftOutcome>;
+}
+
+export type AiConnectionTestOutcome =
+  | { ok: true }
+  | { ok: false; error: Exclude<AiGoalDraftServiceError, 'disabled' | 'storage'> };
+
+export interface TestAiConnectionInput {
+  settings: AiProviderSettings;
+  credentials?: ProviderCredentials;
+  signal: AbortSignal;
+}
+
+export interface AiGoalDraftServicePort extends AiGoalDraftGenerator {
+  testConnection?(input: TestAiConnectionInput): Promise<AiConnectionTestOutcome>;
 }
 
 type FailedAiInteractionResult = Exclude<AiInteractionResult, 'success'>;
@@ -68,6 +92,43 @@ export class AiGoalDraftService {
       durationMs: Math.max(0, this.clock.now() - input.startedAt),
       result: input.result,
     });
+  }
+
+  async testConnection(input: TestAiConnectionInput): Promise<AiConnectionTestOutcome> {
+    let settings: AiProviderSettings;
+    try {
+      settings = normalizeAiProviderSettings(input.settings);
+    } catch {
+      return { ok: false, error: 'invalid-config' };
+    }
+    const binding = { protocol: settings.protocol, baseUrl: settings.baseUrl } as const;
+    let credentials;
+    try {
+      credentials = input.credentials
+        ? { binding, ...normalizeProviderCredentials(input.credentials) }
+        : await this.secretStore.readProviderCredentials(binding);
+    } catch {
+      return { ok: false, error: input.credentials ? 'invalid-config' : 'secret-store' };
+    }
+    if (!credentials) return { ok: false, error: 'not-configured' };
+
+    try {
+      const result = await this.provider.completeStructured({
+        settings,
+        credentials,
+        task: { type: 'connection-test' },
+        signal: input.signal,
+      });
+      if (!result || typeof result !== 'object' || Array.isArray(result)
+        || Object.keys(result).length !== 1 || (result as Record<string, unknown>).ok !== true) {
+        return { ok: false, error: 'invalid-response' };
+      }
+      return { ok: true };
+    } catch (error) {
+      return error instanceof AiOperationError
+        ? { ok: false, error: error.code }
+        : { ok: false, error: 'unavailable' };
+    }
   }
 
   async generate(input: GenerateAiGoalDraftInput): Promise<AiGoalDraftOutcome> {
