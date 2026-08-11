@@ -54,48 +54,36 @@ test('production navigation exposes no development seed path or facts', async ({
   expect(unexpectedNetworkTargets).toEqual([]);
 });
 
-test('production companion matrix has real 3x4 computed-style differences', async ({ page }) => {
+test('production companion matrix exposes the neutral 3x4 state contract without artwork', async ({ page }) => {
   const unexpectedNetworkTargets = trackUnexpectedNetwork(page);
 
   await page.goto('/?companion-matrix=1');
   const cards = page.locator('.companion-matrix-card');
   await expect(cards).toHaveCount(12);
   await expect(page.getByRole('img')).toHaveCount(12);
-  const styles = await cards.evaluateAll((elements) => elements.map((card) => {
-    const style = (selector: string) => getComputedStyle(card.querySelector(selector)!);
+  await expect(page.getByText('伙伴占位', { exact: true })).toHaveCount(12);
+  await expect(page.locator('.companion-avatar [data-part="placeholder"]')).toHaveCount(12);
+  await expect(page.locator('.companion-avatar [data-part]:not([data-part="placeholder"])')).toHaveCount(0);
+  const states = await cards.evaluateAll((elements) => elements.map((card) => {
+    const avatar = card.querySelector<HTMLElement>('.companion-avatar')!;
+    const placeholder = card.querySelector<HTMLElement>('[data-part="placeholder"]')!;
     return {
       stage: card.getAttribute('data-stage'),
       mood: card.getAttribute('data-mood'),
-      bodyHeight: style('.companion-body').height,
-      bodyTransform: style('.companion-body').transform,
-      rightLeafOpacity: style('.leaf-right').opacity,
-      centerLeafOpacity: style('.leaf-center').opacity,
-      eyeHeight: style('.companion-eyes i').height,
-      eyeAnimation: style('.companion-eyes i').animationName,
-      starOpacity: style('.companion-stars').opacity,
-      starAnimation: style('.companion-stars').animationName,
-      sleepOpacity: style('.companion-sleep-z').opacity,
+      avatarStage: avatar.dataset.stage,
+      avatarMood: avatar.dataset.mood,
+      ariaLabel: avatar.getAttribute('aria-label'),
+      partCount: avatar.querySelectorAll('[data-part]').length,
+      animationName: getComputedStyle(placeholder).animationName,
+      animationDuration: getComputedStyle(placeholder).animationDuration,
     };
   }));
 
-  expect(new Set(styles.filter((state) => state.mood === 'idle').map((state) => state.bodyHeight)).size).toBe(3);
-  expect(styles.find((state) => state.stage === 'seed' && state.mood === 'idle')).toMatchObject({ rightLeafOpacity: '0', centerLeafOpacity: '0' });
-  expect(styles.find((state) => state.stage === 'sprout' && state.mood === 'idle')).toMatchObject({ rightLeafOpacity: '1', centerLeafOpacity: '0' });
-  expect(styles.find((state) => state.stage === 'companion' && state.mood === 'idle')).toMatchObject({ rightLeafOpacity: '1', centerLeafOpacity: '1' });
-  for (const stage of ['seed', 'sprout', 'companion']) {
-    const idle = styles.find((state) => state.stage === stage && state.mood === 'idle')!;
-    const working = styles.find((state) => state.stage === stage && state.mood === 'working')!;
-    const celebrating = styles.find((state) => state.stage === stage && state.mood === 'celebrating')!;
-    const sleeping = styles.find((state) => state.stage === stage && state.mood === 'sleeping')!;
-    expect(working.bodyTransform).not.toBe(idle.bodyTransform);
-    expect(working.eyeHeight).not.toBe(idle.eyeHeight);
-    expect(idle.eyeAnimation).toBe('companion-blink');
-    expect(Number(celebrating.starOpacity)).toBeGreaterThan(0);
-    expect(celebrating.starAnimation).toBe('companion-star-pop');
-    expect(idle.starOpacity).toBe('0');
-    expect(sleeping.sleepOpacity).toBe('1');
-    expect(idle.sleepOpacity).toBe('0');
-  }
+  expect(new Set(states.map((state) => `${state.stage}/${state.mood}`)).size).toBe(12);
+  expect(states.every((state) => state.stage === state.avatarStage && state.mood === state.avatarMood)).toBe(true);
+  expect(states.every((state) => state.partCount === 1)).toBe(true);
+  expect(states.every((state) => state.ariaLabel?.includes('伙伴'))).toBe(true);
+  expect(states.every((state) => state.animationName === 'none' && state.animationDuration === '0s')).toBe(true);
   expect(await page.evaluate(() => localStorage.getItem('self-improvement-tracker:v1'))).toBeNull();
   expect(unexpectedNetworkTargets).toEqual([]);
 });

@@ -45,7 +45,7 @@ test('celebrates a zero-XP completion without blocking navigation and undo cance
   expect(unexpectedNetworkTargets).toEqual([]);
 });
 
-test('rebuilds peak stage and room unlocks while reduced and none motion stay static', async ({ page }) => {
+test('rebuilds peak stage and unlock logic while the placeholder stays static', async ({ page }) => {
   const unexpectedNetworkTargets = trackUnexpectedNetwork(page);
   await page.goto('/');
   await page.evaluate(() => {
@@ -68,21 +68,26 @@ test('rebuilds peak stage and room unlocks while reduced and none motion stay st
   await expect(page.getByText('Lv.7')).toBeVisible();
   await expect(page.getByText('0 XP')).toBeVisible();
   await expect(page.getByRole('img', { name: /成长伙伴/ })).toHaveCount(2);
-  for (const label of ['桌边小书', '窗边小植株', '照片挂绳']) await expect(page.getByText(label)).toBeAttached();
-  expect(await page.locator('.companion-avatar.motion-reduced .companion-eyes i').first().evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
+  await expect(page.getByText(/伙伴解锁逻辑：.*桌边小书.*窗边小植株.*照片挂绳/)).toBeVisible();
+  await expect(page.locator('.companion-avatar [data-part="placeholder"]')).toHaveCount(2);
+  await expect(page.locator('.companion-avatar [data-part="body"], .companion-avatar [data-part="eyes"], .companion-avatar [data-part="stars"]')).toHaveCount(0);
+  expect(await page.locator('.companion-avatar.motion-reduced [data-part="placeholder"]').first().evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
 
   await page.getByRole('button', { name: '目标', exact: true }).click();
   await page.getByText('本地数据与设置').click();
   await page.getByLabel('动态效果').selectOption('none');
   await expect(page.getByText('设置已保存在本机。')).toBeVisible();
   await page.reload();
-  expect(await page.locator('.companion-avatar.motion-none .companion-eyes i').first().evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
+  expect(await page.locator('.companion-avatar.motion-none [data-part="placeholder"]').first().evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
   await expect(page.getByText('Lv.7')).toBeVisible();
   expect(unexpectedNetworkTargets).toEqual([]);
 });
 
 test('one-shot UI timer leaves celebration after two seconds without polling', async ({ page }) => {
   const unexpectedNetworkTargets = trackUnexpectedNetwork(page);
+  const fixedNow = new Date('2026-08-11T10:00:00.000Z');
+  await page.clock.install({ time: fixedNow });
+  await page.clock.pauseAt(new Date(fixedNow.getTime() + 1_000));
   await page.goto('/');
   await page.evaluate(() => {
     const now = Date.now();
@@ -100,7 +105,8 @@ test('one-shot UI timer leaves celebration after two seconds without polling', a
   await page.reload();
 
   await expect(page.getByRole('img', { name: /刚刚完成/ })).toHaveCount(2);
-  await expect(page.getByRole('img', { name: /刚刚完成/ })).toHaveCount(0, { timeout: 4_000 });
+  await page.clock.fastForward(2_000);
+  await expect(page.getByRole('img', { name: /刚刚完成/ })).toHaveCount(0);
   await expect(page.getByRole('img', { name: /安静陪伴|安静休息/ })).toHaveCount(2);
   expect(unexpectedNetworkTargets).toEqual([]);
 });

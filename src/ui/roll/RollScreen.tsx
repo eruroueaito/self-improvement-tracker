@@ -38,11 +38,11 @@ export function RollScreen(props: {
             size="expanded"
             motion={props.snapshot.settings.motion}
           />
-          <ul className="room-unlocks" aria-label="已解锁房间物品">
+          <p className="companion-unlock-status">
             {props.companionView.unlocks.length === 0
-              ? <li className="room-unlock-empty">继续行动会自然布置小房间</li>
-              : props.companionView.unlocks.map((unlock) => <li className={`room-unlock unlock-${unlock}`} key={unlock}>{companionUnlockLabel(unlock)}</li>)}
-          </ul>
+              ? '伙伴解锁逻辑：暂无'
+              : `伙伴解锁逻辑：${props.companionView.unlocks.map(companionUnlockLabel).join('、')}`}
+          </p>
         </div>
         <div className="hero-copy">
           <p className="companion-state-copy">{stateSummary}</p>

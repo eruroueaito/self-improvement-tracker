@@ -1,9 +1,9 @@
 /**
- * 模块名称：原创 CSS 像素伙伴
- * 职责描述：以单一语义 DOM 骨架渲染三阶段、四状态的本地伙伴
- * 输入/输出：接收 stage/mood/size/motion，输出无远程资产的可访问图形
+ * 模块名称：伙伴中性占位
+ * 职责描述：保留三阶段、四状态的语义契约，暂不渲染实际伙伴美术
+ * 输入/输出：接收 stage/mood/size/motion，输出无装饰动画的可访问占位
  * 依赖关系：伙伴运行时类型、AppSettings、共享中文展示映射
- * 注意事项：所有状态都有静态形态和文字，不能只依赖颜色或动画表达
+ * 注意事项：占位表现不得暗示最终造型；状态始终以文字和稳定属性表达
  */
 import type { CompanionMood, CompanionStage } from '../../modules/companion/types';
 import type { AppSettings } from '../../modules/settings/settings';
@@ -26,20 +26,11 @@ export function CompanionAvatar(props: {
       role="img"
       aria-label={`${stageLabel}，${moodLabel}`}
     >
-      <span className="companion-shadow" data-part="shadow" aria-hidden="true" />
-      <span className="companion-body" data-part="body" aria-hidden="true" />
-      <span className="companion-leaf leaf-left" data-part="leaf-left" aria-hidden="true" />
-      <span className="companion-leaf leaf-right" data-part="leaf-right" aria-hidden="true" />
-      <span className="companion-leaf leaf-center" data-part="leaf-center" aria-hidden="true" />
-      <span className="companion-eyes" data-part="eyes" aria-hidden="true"><i /><i /></span>
-      <span className="companion-mouth" data-part="mouth" aria-hidden="true" />
-      <span className="companion-arms" data-part="arms" aria-hidden="true"><i /><i /></span>
-      <span className="companion-legs" data-part="legs" aria-hidden="true"><i /><i /></span>
-      <span className="companion-stars" data-part="stars" aria-hidden="true"><i>✦</i><i>✦</i></span>
-      <span className="companion-sleep-z" data-part="sleep-z" aria-hidden="true">Z</span>
-      <span className="companion-blush" data-part="blush" aria-hidden="true"><i /><i /></span>
-      <span className="companion-glow" data-part="glow" aria-hidden="true" />
-      <span className="sr-only">{moodLabel}</span>
+      <span className="companion-placeholder" data-part="placeholder">
+        <span className="companion-placeholder-title">伙伴占位</span>
+        <span className="companion-placeholder-stage">{stageLabel}</span>
+        <span className="companion-placeholder-mood">{moodLabel}</span>
+      </span>
     </div>
   );
 }

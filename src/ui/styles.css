@@ -88,69 +88,17 @@ h3 { margin-bottom: .35rem; }
 .hero { display: grid; grid-template-columns: minmax(130px, 170px) 1fr; align-items: center; gap: 1rem; overflow: hidden; background: linear-gradient(135deg, #fffdf7, #e4efe7); }
 .hero-copy { min-width: 0; }
 .companion-state-copy { margin-bottom: .35rem !important; color: var(--accent-dark) !important; font-weight: 800; }
-.companion-hero-scene { position: relative; display: grid; justify-items: center; min-height: 178px; border-radius: 16px; background: linear-gradient(#d7e9dc 0 58%, #d8c8a8 58%); overflow: hidden; }
-.room-unlocks { position: absolute; inset: 0; z-index: 0; list-style: none; margin: 0; padding: 0; pointer-events: none; }
-.room-unlock { position: absolute; overflow: hidden; color: transparent; font-size: 0; }
-.unlock-desk-book { left: 1rem; bottom: 1rem; width: 30px; height: 10px; border: 3px solid #5d4939; border-top-color: #b45f50; background: #f0c96f; box-shadow: 0 -7px 0 -3px #60806b; }
-.unlock-window-plant { right: 1rem; bottom: 1rem; width: 25px; height: 23px; border-bottom: 10px solid #b96e4f; }
-.unlock-window-plant::before, .unlock-window-plant::after { content: ""; position: absolute; bottom: 7px; width: 12px; height: 16px; border-radius: 12px 2px; background: #558760; }
-.unlock-window-plant::before { left: 2px; transform: rotate(-24deg); }
-.unlock-window-plant::after { right: 2px; transform: scaleX(-1) rotate(-24deg); }
-.unlock-photo-string { top: .8rem; left: 14%; width: 72%; height: 26px; border-top: 2px solid #8c745f; }
-.unlock-photo-string::before { content: ""; display: block; width: 10px; height: 13px; margin: 4px 0 0 18%; background: #f5df9e; box-shadow: 29px 3px #d59578, 57px -1px #8fb0ad; }
-.room-unlock-empty { position: absolute; right: .45rem; bottom: .35rem; left: .45rem; color: rgb(38 36 31 / .58); font-size: .63rem; text-align: center; }
+.companion-hero-scene { display: grid; justify-items: center; gap: .65rem; min-height: 178px; border: 1px dashed #a9afa8; border-radius: 16px; background: #f5f4ef; padding: 1rem; }
+.companion-unlock-status { margin: 0; color: var(--muted); font-size: .72rem; text-align: center; }
 
-/* 原创 CSS 像素伙伴：所有状态共用同一 DOM 骨架。 */
-.companion-avatar { --body-w: 3.6em; --body-h: 3.1em; --body-bottom: 2.2em; --face-bottom: 3.7em; --face-w: 2em; position: relative; z-index: 1; display: inline-block; flex: 0 0 auto; width: 14em; height: 14em; font-size: 10px; color: #2d392e; pointer-events: none; isolation: isolate; }
-.companion-size-compact { width: 10em; height: 10em; font-size: 6px; }
-.companion-shadow { position: absolute; z-index: 0; left: 50%; bottom: 1.5em; width: calc(var(--body-w) + 1.8em); height: 1em; border-radius: 50%; background: rgb(59 68 55 / .22); transform: translateX(-50%); }
-.companion-body { position: absolute; z-index: 2; left: 50%; bottom: var(--body-bottom); width: var(--body-w); height: var(--body-h); border: .35em solid #35483a; border-radius: 44% 44% 38% 38%; background: #9bbf72; box-shadow: inset .5em -.5em 0 #78a35e, inset -.4em .4em 0 #c5d98c; transform: translateX(-50%); transform-origin: 50% 100%; }
-.companion-leaf { position: absolute; z-index: 1; bottom: calc(var(--body-bottom) + var(--body-h) - .25em); width: 2.2em; height: 1.2em; border: .3em solid #35483a; border-radius: 100% 10% 100% 10%; background: #72a565; transform-origin: 100% 100%; }
-.leaf-left { left: calc(50% - 2em); transform: rotate(24deg); }
-.leaf-right { right: calc(50% - 2em); transform: scaleX(-1) rotate(24deg); }
-.leaf-center { left: calc(50% - .65em); bottom: calc(var(--body-bottom) + var(--body-h) + .3em); width: 1.3em; height: 1.8em; transform: rotate(-42deg); }
-.companion-eyes { position: absolute; z-index: 4; left: 50%; bottom: var(--face-bottom); display: flex; justify-content: space-between; width: var(--face-w); transform: translateX(-50%); }
-.companion-eyes i { width: .55em; height: .65em; border-radius: .2em; background: #26372d; transform-origin: center; }
-.companion-mouth { position: absolute; z-index: 4; left: 50%; bottom: calc(var(--face-bottom) - .9em); width: .8em; height: .35em; border-right: .2em solid #395040; border-bottom: .2em solid #395040; transform: translateX(-50%) rotate(45deg); }
-.companion-arms { position: absolute; z-index: 3; left: 50%; bottom: calc(var(--body-bottom) + 1em); width: calc(var(--body-w) + 2.2em); height: 2.8em; transform: translateX(-50%); }
-.companion-arms i { position: absolute; top: .5em; width: .65em; height: 2.1em; border: .3em solid #35483a; border-radius: .5em; background: #8eb26b; transform-origin: 50% 90%; }
-.companion-arms i:first-child { left: 0; transform: rotate(20deg); }
-.companion-arms i:last-child { right: 0; transform: rotate(-20deg); }
-.companion-legs { position: absolute; z-index: 1; left: 50%; bottom: .8em; display: flex; justify-content: space-between; width: calc(var(--body-w) - .6em); transform: translateX(-50%); }
-.companion-legs i { width: .8em; height: 1.8em; border: .3em solid #35483a; border-radius: .35em; background: #72985d; }
-.companion-stars { position: absolute; z-index: 5; inset: .9em .8em auto; display: flex; justify-content: space-between; color: #e0a846; font-size: 2.2em; line-height: 1; opacity: 0; }
-.companion-sleep-z { position: absolute; z-index: 5; top: 1.1em; right: 2em; color: #4b6e62; font-size: 2.2em; font-weight: 900; opacity: 0; transform: rotate(8deg); }
-.companion-blush { position: absolute; z-index: 4; left: 50%; bottom: calc(var(--face-bottom) - .15em); display: flex; justify-content: space-between; width: calc(var(--face-w) + 1em); transform: translateX(-50%); opacity: .65; }
-.companion-blush i { width: .65em; height: .28em; border-radius: 50%; background: #d78d78; }
-.companion-glow { position: absolute; z-index: -1; inset: 1.5em; border-radius: 50%; background: #f3cf71; opacity: 0; }
-
-.companion-stage-seed { --body-w: 4.4em; --body-h: 3.4em; --face-bottom: 3.9em; --face-w: 2.2em; }
-.companion-stage-seed .leaf-right, .companion-stage-seed .leaf-center, .companion-stage-seed .companion-arms, .companion-stage-seed .companion-legs { opacity: 0; }
-.companion-stage-sprout { --body-w: 4.8em; --body-h: 6em; --face-bottom: 6.6em; --face-w: 2.6em; }
-.companion-stage-sprout .leaf-center { opacity: 0; }
-.companion-stage-companion { --body-w: 6.2em; --body-h: 7.8em; --face-bottom: 8em; --face-w: 3.3em; }
-
-.companion-mood-idle.motion-system .companion-eyes i { animation: companion-blink 4s steps(1, end) infinite; }
-.companion-mood-working .companion-body { transform: translateX(-50%) rotate(2deg); }
-.companion-mood-working .companion-eyes i { width: .8em; height: .3em; border-radius: .2em .2em 0 0; }
-.companion-mood-working .companion-mouth { width: .65em; height: 0; border-right: 0; transform: translateX(-50%); }
-.companion-mood-celebrating .companion-arms i:first-child { transform: rotate(145deg); }
-.companion-mood-celebrating .companion-arms i:last-child { transform: rotate(-145deg); }
-.companion-mood-celebrating .companion-mouth { width: 1.1em; height: .55em; border: .24em solid #395040; border-top: 0; border-radius: 0 0 1em 1em; transform: translateX(-50%); }
-.companion-mood-celebrating .companion-stars, .companion-mood-celebrating .companion-glow { opacity: 1; }
-.companion-mood-celebrating.motion-system .companion-stars { animation: companion-star-pop .9s steps(2, end) 2; }
-.companion-mood-celebrating.motion-system .companion-glow { animation: companion-glow 1.8s ease-out 1; }
-.companion-mood-sleeping .companion-eyes i { height: .18em; border-radius: 99px; transform: rotate(8deg); }
-.companion-mood-sleeping .companion-mouth { width: .45em; height: .45em; border: .18em solid #395040; border-radius: 50%; transform: translateX(-50%); }
-.companion-mood-sleeping .companion-sleep-z { opacity: 1; }
-.companion-mood-sleeping .companion-blush { opacity: .25; }
-
-.companion-avatar.motion-reduced *, .companion-avatar.motion-reduced *::before, .companion-avatar.motion-reduced *::after,
-.companion-avatar.motion-none *, .companion-avatar.motion-none *::before, .companion-avatar.motion-none *::after { animation-name: none !important; animation-duration: 0s !important; animation-iteration-count: 1 !important; }
-
-@keyframes companion-blink { 0%, 46%, 52%, 100% { transform: scaleY(1); } 48%, 50% { transform: scaleY(.12); } }
-@keyframes companion-star-pop { 0% { transform: translateY(.5em) scale(.7); opacity: .45; } 50%, 100% { transform: translateY(0) scale(1); opacity: 1; } }
-@keyframes companion-glow { from { transform: scale(.75); opacity: .6; } to { transform: scale(1.12); opacity: 0; } }
+/* 中性伙伴占位：保留状态契约，不暗示最终美术造型。 */
+.companion-avatar { display: inline-grid; flex: 0 0 auto; place-items: stretch; width: 9.5rem; min-height: 7rem; color: #2d392e; pointer-events: none; }
+.companion-size-compact { width: 6.75rem; min-height: 4.75rem; }
+.companion-placeholder { display: grid; align-content: center; gap: .25rem; width: 100%; min-height: inherit; border: 1px dashed #879087; border-radius: 14px; background: #eceeea; padding: .65rem; text-align: center; }
+.companion-placeholder-title { color: #555d56; font-size: .68rem; font-weight: 650; letter-spacing: .06em; }
+.companion-placeholder-stage { font-size: .9rem; font-weight: 800; }
+.companion-placeholder-mood { color: var(--muted); font-size: .76rem; }
+.companion-avatar, .companion-avatar *, .companion-avatar *::before, .companion-avatar *::after { animation: none !important; }
 
 .companion-matrix-page { width: min(920px, 100%); margin: 0 auto; padding: 2rem 1rem 4rem; }
 .companion-matrix-page > p:not(.eyebrow) { color: var(--muted); }
@@ -207,13 +155,16 @@ legend { margin-bottom: .45rem; font-weight: 750; }
   .wide { grid-column: auto; }
   .goal-card { align-items: flex-start; flex-direction: column; }
   .section-heading { align-items: stretch; flex-direction: column; }
-  .topbar { align-items: flex-end; }
+  .topbar { align-items: flex-end; gap: .5rem; }
+  .topbar > div:first-child { min-width: 0; }
   .settings-grid { grid-template-columns: 1fr; }
   .import-preview dl { grid-template-columns: 1fr; }
   .hero { grid-template-columns: minmax(118px, 42%) 1fr; gap: .65rem; }
   .companion-hero-scene { min-height: 164px; }
-  .companion-hero-scene .companion-size-expanded { font-size: 9px; }
-  .companion-summary { min-width: 126px; }
+  .companion-hero-scene .companion-size-expanded { width: min(9.5rem, 100%); }
+  .companion-summary { min-width: 126px; padding: .3rem; }
+  .companion-summary .companion-size-compact { width: 5rem; }
+  .companion-summary .companion-level { font-size: .78rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
