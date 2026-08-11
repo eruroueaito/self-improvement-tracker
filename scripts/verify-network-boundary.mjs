@@ -1,7 +1,7 @@
 /**
- * 模块名称：N0 网络边界验证
+ * 模块名称：N4 网络边界验证
  * 职责描述：静态验证可发布源码、CSP 与 Android manifest 只包含当前阶段批准的网络配置
- * 输入/输出：读取仓库文件；发现未批准远程 URL、网络 API、宽松 CSP 或 INTERNET 权限时以非零状态退出
+ * 输入/输出：读取仓库文件；发现未批准远程 URL/网络 API、宽松 CSP 或 Android 网络配置时以非零状态退出
  * 依赖关系：Node.js 标准库、当前仓库源码与 Android 构建产物
  * 注意事项：N4 引入 ProviderAdapter 时必须显式升级本脚本，不能绕过或删除门槛
  */
@@ -12,14 +12,13 @@ const repositoryRoot = resolve(import.meta.dirname, '..');
 const sourceExtensions = new Set(['.ts', '.tsx', '.js', '.mjs', '.html', '.css']);
 const scanRoots = ['src', 'index.html', 'capacitor.config.ts'];
 const allowedUrlPrefixes = [
-  'http://127.0.0.1:',
-  'http://localhost:',
-  'ws://127.0.0.1:',
-  'ws://localhost:',
   'http://www.w3.org/2000/svg',
 ];
 const allowedRemoteUrlsByFile = new Map([
   ['src/modules/ai/providerConfig.ts', new Set(['https://api.openai.com/v1'])],
+]);
+const allowedNetworkApisByFile = new Map([
+  ['src/adapters/ai/openAiCompatibleProvider.ts', new Set(['fetch'])],
 ]);
 const violations = [];
 
@@ -55,20 +54,38 @@ for (const file of releaseSourceFiles) {
     }
   }
   const networkApis = contents.match(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\b|navigator\.sendBeacon/g) ?? [];
-  for (const api of networkApis) violations.push(`${file}: network API ${api}`);
+  const approvedNetworkApis = allowedNetworkApisByFile.get(repositoryPath(file));
+  for (const api of networkApis) {
+    if (!approvedNetworkApis?.has(api)) violations.push(`${file}: network API ${api}`);
+  }
 }
 
 const indexPath = join(repositoryRoot, 'index.html');
 const indexContents = await readFile(indexPath, 'utf8');
+const csp = indexContents.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1] ?? '';
 const requiredCspDirectives = [
   "default-src 'self'",
   "base-uri 'none'",
   "object-src 'none'",
+  "frame-src 'none'",
   "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data: blob:",
   "font-src 'self'",
+  'connect-src https:',
+  "form-action 'self'",
 ];
+const parsedCspDirectives = new Map();
+for (const directive of csp.split(';').map((value) => value.trim()).filter(Boolean)) {
+  const name = directive.split(/\s+/, 1)[0];
+  if (parsedCspDirectives.has(name)) violations.push(`${indexPath}: duplicate CSP directive ${name}`);
+  parsedCspDirectives.set(name, directive);
+}
 for (const directive of requiredCspDirectives) {
-  if (!indexContents.includes(directive)) violations.push(`${indexPath}: missing CSP directive ${directive}`);
+  const name = directive.split(/\s+/, 1)[0];
+  if (parsedCspDirectives.get(name) !== directive) {
+    violations.push(`${indexPath}: CSP directive must be exactly ${directive}`);
+  }
 }
 
 const manifestCandidates = [join(repositoryRoot, 'android', 'app', 'src', 'main', 'AndroidManifest.xml')];
@@ -81,12 +98,33 @@ try {
 
 for (const manifest of manifestCandidates) {
   const contents = await readFile(manifest, 'utf8');
-  if (contents.includes('android.permission.INTERNET')) violations.push(`${manifest}: INTERNET permission is forbidden before N4`);
+  const internetPermissions = contents.match(/<uses-permission\b[^>]*android:name="android\.permission\.INTERNET"[^>]*>/g) ?? [];
+  if (internetPermissions.length !== 1) {
+    violations.push(`${manifest}: INTERNET permission count must be exactly 1, found ${internetPermissions.length}`);
+  }
+  if (!/android:allowBackup\s*=\s*"false"/.test(contents)) {
+    violations.push(`${manifest}: android:allowBackup must be false`);
+  }
+  if (!/android:usesCleartextTraffic\s*=\s*"false"/.test(contents)) {
+    violations.push(`${manifest}: android:usesCleartextTraffic must be false`);
+  }
+  const forbiddenNetworkPermissions = [
+    'ACCESS_NETWORK_STATE',
+    'CHANGE_NETWORK_STATE',
+    'ACCESS_WIFI_STATE',
+    'CHANGE_WIFI_STATE',
+    'NEARBY_WIFI_DEVICES',
+  ];
+  for (const permission of forbiddenNetworkPermissions) {
+    if (contents.includes(`android.permission.${permission}`)) {
+      violations.push(`${manifest}: forbidden network permission ${permission}`);
+    }
+  }
 }
 
 if (violations.length > 0) {
-  console.error(['N0 network boundary failed:', ...violations.map((item) => `- ${item}`)].join('\n'));
+  console.error(['N4 network boundary failed:', ...violations.map((item) => `- ${item}`)].join('\n'));
   process.exit(1);
 }
 
-console.log(`N4 staged network boundary passed: ${releaseSourceFiles.length} release source files and ${manifestCandidates.length} manifest(s) checked.`);
+console.log(`N4 network boundary passed: ${releaseSourceFiles.length} release source files and ${manifestCandidates.length} manifest(s) checked.`);

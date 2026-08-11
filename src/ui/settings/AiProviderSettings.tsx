@@ -109,7 +109,7 @@ export function AiProviderSettings(props: {
       <p className="privacy-note">目标文本只会在你主动生成或测试时发送到 <b>{host}</b>，模型 <b>{provider.model || '未配置'}</b>。不会发送数据库、设备、伙伴、奖励、Roll、Session 或历史。</p>
       <div className="form-grid">
         <label className="wide">Base URL
-          <input value={provider.baseUrl} onChange={(event) => setProvider({ ...provider, baseUrl: event.target.value })} placeholder="https://api.example.com/v1" />
+          <input value={provider.baseUrl} onChange={(event) => setProvider({ ...provider, baseUrl: event.target.value })} placeholder="请输入 HTTPS Provider Base URL" />
         </label>
         <label>模型 ID
           <input value={provider.model} onChange={(event) => setProvider({ ...provider, model: event.target.value })} maxLength={160} />
