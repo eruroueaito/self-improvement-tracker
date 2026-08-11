@@ -34,7 +34,8 @@
     "@capacitor/local-notifications": "8.2.1",
     "@capacitor/share": "8.0.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.0",
