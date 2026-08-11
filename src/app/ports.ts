@@ -11,6 +11,7 @@ import type {
   ProviderBinding,
   ProviderCredentials,
 } from '../modules/ai/credentials';
+import type { AiProviderSettings } from '../modules/ai/types';
 export type { AppSnapshot, CurrentAppSnapshot, PersistedSnapshot, PersistedSnapshotV1 } from './snapshots';
 
 export interface DataStore {
@@ -41,4 +42,19 @@ export interface SecretStore {
   writeProviderCredentials(binding: ProviderBinding, credentials: ProviderCredentials): Promise<void>;
   deleteProviderCredentials(): Promise<void>;
   hasProviderCredentials(expected: ProviderBinding): Promise<boolean>;
+}
+
+export type ProviderTask =
+  | { type: 'goal-draft'; input: string }
+  | { type: 'connection-test' };
+
+export interface ProviderCompletionInput {
+  settings: AiProviderSettings;
+  credentials: EndpointBoundProviderCredentials;
+  task: ProviderTask;
+  signal: AbortSignal;
+}
+
+export interface ProviderAdapter {
+  completeStructured(input: ProviderCompletionInput): Promise<unknown>;
 }
