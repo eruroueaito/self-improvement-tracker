@@ -1,17 +1,18 @@
 /**
  * 模块名称：版本化导入校验
- * 职责描述：在替换本地数据前完整校验 V1/V2 导出格式、字段边界、引用和账本一致性
+ * 职责描述：在替换本地数据前完整校验 V1/V2/V3 导出格式、字段边界、引用和账本一致性
  * 输入/输出：接收未知 JSON 值，返回经过校验的版本化快照或抛出 ValidationError
  * 依赖关系：领域校验器、版本化快照、应用设置与领域类型
  * 注意事项：宠物投影仅验证存在，调用方必须从奖励账本重建而非信任缓存
  */
 import type { ActivityTemplate, Goal } from '../modules/goals/types';
+import { normalizeAiInteractionHistory } from '../modules/ai/interactionLog';
 import { normalizeActivityInput, normalizeGoalInput, ValidationError } from '../modules/goals/validation';
 import type { RecommendationRun } from '../modules/recommendations/types';
 import type { CompanionProjection, RewardLedgerEntry } from '../modules/rewards/types';
 import { normalizeSettlement } from '../modules/sessions/sessionMachine';
 import type { Session } from '../modules/sessions/types';
-import { normalizeAppSettings } from '../modules/settings/settings';
+import { normalizeAppSettings, normalizeAppSettingsV2 } from '../modules/settings/settings';
 import type { PersistedSnapshot } from './snapshots';
 
 export interface ValidatedImportData {
@@ -281,23 +282,55 @@ export const validateSnapshotFacts = (value: unknown): ValidatedImportData => {
 };
 
 export interface ValidatedImportEnvelope {
-  sourceVersion: 1 | 2;
+  sourceVersion: 1 | 2 | 3;
   snapshot: PersistedSnapshot;
 }
 
 export const validateImportEnvelope = (value: unknown): ValidatedImportEnvelope => {
   const envelope = record(value, '导入文件');
-  assertExactKeys(envelope, ['format', 'version', 'exportedAt', 'data'], '导入文件');
-  if (envelope.format !== 'self-improvement-tracker' || (envelope.version !== 1 && envelope.version !== 2)) {
+  if (envelope.format !== 'self-improvement-tracker'
+    || (envelope.version !== 1 && envelope.version !== 2 && envelope.version !== 3)) {
     throw new ValidationError('导入文件格式或版本不受支持');
   }
+  const sourceVersion = envelope.version;
+  assertExactKeys(
+    envelope,
+    sourceVersion === 3
+      ? ['format', 'version', 'exportedAt', 'aiHistoryIncluded', 'data']
+      : ['format', 'version', 'exportedAt', 'data'],
+    '导入文件',
+  );
   finite(envelope.exportedAt, '导入文件.exportedAt');
   const data = record(envelope.data, '导入文件.data');
-  const sourceVersion = envelope.version;
-  assertExactKeys(data, sourceVersion === 1 ? FACT_KEYS : [...FACT_KEYS, 'settings'], '导入文件.data');
+  assertExactKeys(
+    data,
+    sourceVersion === 1
+      ? FACT_KEYS
+      : sourceVersion === 2
+        ? [...FACT_KEYS, 'settings']
+        : [...FACT_KEYS, 'settings', 'aiInteractions'],
+    '导入文件.data',
+  );
   const facts = validateSnapshotFacts(data);
-  const snapshot: PersistedSnapshot = sourceVersion === 1
-    ? { schemaVersion: 1, ...facts }
-    : { schemaVersion: 2, ...facts, settings: normalizeAppSettings(data.settings) };
+  let snapshot: PersistedSnapshot;
+  if (sourceVersion === 1) {
+    snapshot = { schemaVersion: 1, ...facts };
+  } else if (sourceVersion === 2) {
+    snapshot = { schemaVersion: 2, ...facts, settings: normalizeAppSettingsV2(data.settings) };
+  } else {
+    if (typeof envelope.aiHistoryIncluded !== 'boolean') {
+      throw new ValidationError('导入文件.aiHistoryIncluded 必须是布尔值');
+    }
+    const aiInteractions = normalizeAiInteractionHistory(data.aiInteractions);
+    if (!envelope.aiHistoryIncluded && aiInteractions.length > 0) {
+      throw new ValidationError('导入文件声明不含 AI 历史但实际包含记录');
+    }
+    snapshot = {
+      schemaVersion: 3,
+      ...facts,
+      settings: normalizeAppSettings(data.settings),
+      aiInteractions,
+    };
+  }
   return { sourceVersion, snapshot };
 };

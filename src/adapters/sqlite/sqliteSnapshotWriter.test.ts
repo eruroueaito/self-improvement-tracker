@@ -1,7 +1,7 @@
 /**
  * 模块名称：SQLite 当前快照事务写入测试
  * 职责描述：验证写入顺序、meta-last 约束及每个失败序号的 rollback
- * 输入/输出：用可注入失败的窄连接执行典型 v2 快照
+ * 输入/输出：用可注入失败的窄连接执行典型 v3 快照
  * 依赖关系：Vitest、SQLite 快照写入器、v1 fixture 与设置默认值
  * 注意事项：fake connection 仅证明事务编排，不证明原生插件行为
  */
@@ -37,8 +37,19 @@ class RecordingConnection implements SnapshotWriterConnection {
 
 const typicalSnapshot = (): CurrentAppSnapshot => ({
   ...createTypicalPersistedSnapshotV1(),
-  schemaVersion: 2,
+  schemaVersion: 3,
   settings: createDefaultAppSettings(),
+  aiInteractions: [{
+    id: 'interaction-1',
+    requestType: 'goal-draft',
+    providerModel: 'model-1',
+    schemaVersion: 'goal-draft-v1',
+    inputSummary: 'GoalDraft request (12 characters)',
+    validatedOutput: null,
+    startedAt: 1,
+    durationMs: 2,
+    result: 'timeout',
+  }],
 });
 
 describe('writeCurrentSnapshot', () => {
@@ -49,6 +60,8 @@ describe('writeCurrentSnapshot', () => {
     expect(connection.operations.at(-1)).toBe('commit');
     expect(connection.operations.at(-2)).toContain('app_meta');
     expect(connection.operations.findIndex((item) => item.includes('app_settings'))).toBeGreaterThan(0);
+    expect(connection.operations.some((item) => item.includes('DELETE FROM ai_interactions'))).toBe(true);
+    expect(connection.operations.some((item) => item.includes('INSERT INTO ai_interactions'))).toBe(true);
     expect(connection.rollbackCalls).toBe(0);
   });
 

@@ -47,10 +47,11 @@ const reward = (id: string, sessionId: string, goalId: string, delta: number): R
   ruleVersion: 1, idempotencyKey: id, reversalOfEntryId: null, createdAt: 20,
 });
 const snapshot = (overrides: Partial<AppSnapshot> = {}): AppSnapshot => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   goals: [], activities: [], recommendationRuns: [], sessions: [], rewardEntries: [],
   companionProjection: { globalXp: 0, level: 1, evolutionStage: 'seed', mood: 'idle', lastUpdatedAt: 1 },
   settings: createDefaultAppSettings(),
+  aiInteractions: [],
   ...overrides,
 });
 

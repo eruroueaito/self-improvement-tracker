@@ -74,14 +74,27 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
   const exportContents = Buffer.concat(chunks).toString('utf8');
   const exported = JSON.parse(exportContents);
   expect(exported.format).toBe('self-improvement-tracker');
-  expect(exported.version).toBe(2);
+  expect(exported.version).toBe(3);
+  expect(exported.aiHistoryIncluded).toBe(false);
   expect(exported.data.settings).toEqual({
     theme: 'dark',
     motion: 'reduced',
     hapticsEnabled: false,
     notificationsEnabled: false,
-    ai: { enabled: true, historyEnabled: true },
+    ai: {
+      enabled: true,
+      goalDraftEnabled: false,
+      historyEnabled: true,
+      provider: {
+        protocol: 'openai-chat-completions',
+        baseUrl: 'https://api.openai.com/v1',
+        model: '',
+        requestTimeoutMs: 30_000,
+        structuredOutputMode: 'json-schema',
+      },
+    },
   });
+  expect(exported.data.aiInteractions).toEqual([]);
 
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: '清空全部本地数据' }).click();
@@ -93,7 +106,7 @@ test('offline MVP loop persists and round-trips all local data', async ({ page }
     buffer: Buffer.from(exportContents),
   });
   await expect(page.getByRole('heading', { name: '确认覆盖本机数据' })).toBeVisible();
-  await expect(page.getByText('v2', { exact: true })).toBeVisible();
+  await expect(page.getByText('v3', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: '阅读' })).toHaveCount(0);
   await page.getByRole('button', { name: '取消' }).click();
   await expect(page.getByRole('heading', { name: '确认覆盖本机数据' })).toHaveCount(0);

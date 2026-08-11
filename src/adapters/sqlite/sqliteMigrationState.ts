@@ -5,8 +5,8 @@
  * 依赖关系：无外部依赖
  * 注意事项：未知、未来或无法证明来源的状态必须 fail closed
  */
-export const SQLITE_NATIVE_VERSION = 2 as const;
-export const APP_SCHEMA_VERSION = 2 as const;
+export const SQLITE_NATIVE_VERSION = 3 as const;
+export const APP_SCHEMA_VERSION = 3 as const;
 
 export const V1_REQUIRED_TABLES = [
   'goals',
@@ -19,8 +19,15 @@ export const V1_REQUIRED_TABLES = [
 ] as const;
 
 export const V2_REQUIRED_TABLES = [...V1_REQUIRED_TABLES, 'app_settings'] as const;
+export const V3_REQUIRED_TABLES = [...V2_REQUIRED_TABLES, 'ai_interactions'] as const;
 
-export type ExistingSqliteState = 'legacy-v1' | 'migration-retry' | 'current-v2';
+export type ExistingSqliteState =
+  | 'legacy-v1'
+  | 'retry-v1-native-v2'
+  | 'current-v2'
+  | 'retry-v1-native-v3'
+  | 'retry-v2-native-v3'
+  | 'current-v3';
 
 export class SqliteDataIntegrityError extends Error {
   constructor(message: string) {
@@ -64,6 +71,12 @@ export const classifyExistingSqliteState = (input: {
   tables: ReadonlySet<string>;
 }): ExistingSqliteState => {
   assertNativeVersion(input.nativeVersion);
+  if (input.nativeVersion === 1) {
+    throw new SqliteDataIntegrityError('SQLite native version 1 是不受支持的中间状态');
+  }
+  if (!Number.isInteger(input.appSchemaVersion) || input.appSchemaVersion < 1) {
+    throw new SqliteDataIntegrityError(`应用 schema 无效：${String(input.appSchemaVersion)}`);
+  }
   if (input.appSchemaVersion > APP_SCHEMA_VERSION) {
     throw new SqliteDataIntegrityError(`应用 schema ${input.appSchemaVersion} 高于当前支持版本 ${APP_SCHEMA_VERSION}`);
   }
@@ -72,16 +85,25 @@ export const classifyExistingSqliteState = (input: {
     assertTables(input.tables, V1_REQUIRED_TABLES);
     return 'legacy-v1';
   }
-  if (input.appSchemaVersion === 1 && input.nativeVersion === SQLITE_NATIVE_VERSION) {
+  if (input.appSchemaVersion === 1 && input.nativeVersion === 2) {
     assertTables(input.tables, V2_REQUIRED_TABLES);
-    return 'migration-retry';
+    return 'retry-v1-native-v2';
   }
-  if (input.appSchemaVersion === APP_SCHEMA_VERSION && input.nativeVersion === SQLITE_NATIVE_VERSION) {
+  if (input.appSchemaVersion === 2 && input.nativeVersion === 2) {
     assertTables(input.tables, V2_REQUIRED_TABLES);
     return 'current-v2';
   }
-  if (input.appSchemaVersion === APP_SCHEMA_VERSION && input.nativeVersion < SQLITE_NATIVE_VERSION) {
+  if (input.nativeVersion === 3) {
+    assertTables(input.tables, V3_REQUIRED_TABLES);
+    if (input.appSchemaVersion === 1) return 'retry-v1-native-v3';
+    if (input.appSchemaVersion === 2) return 'retry-v2-native-v3';
+    if (input.appSchemaVersion === 3) return 'current-v3';
+  }
+  if (input.appSchemaVersion === 2 && input.nativeVersion < 2) {
     throw new SqliteDataIntegrityError('应用 schema 已是 v2，但 SQLite 原生结构仍低于 v2');
+  }
+  if (input.appSchemaVersion === 3 && input.nativeVersion < 3) {
+    throw new SqliteDataIntegrityError('应用 schema 已是 v3，但 SQLite 原生结构仍低于 v3');
   }
 
   throw new SqliteDataIntegrityError(

@@ -12,13 +12,17 @@ import {
   SqliteDataIntegrityError,
   V1_REQUIRED_TABLES,
   V2_REQUIRED_TABLES,
+  V3_REQUIRED_TABLES,
 } from './sqliteMigrationState';
 
 describe('SQLite migration state', () => {
   it.each([
     [0, 1, V1_REQUIRED_TABLES, 'legacy-v1'],
-    [2, 1, V2_REQUIRED_TABLES, 'migration-retry'],
+    [2, 1, V2_REQUIRED_TABLES, 'retry-v1-native-v2'],
     [2, 2, V2_REQUIRED_TABLES, 'current-v2'],
+    [3, 1, V3_REQUIRED_TABLES, 'retry-v1-native-v3'],
+    [3, 2, V3_REQUIRED_TABLES, 'retry-v2-native-v3'],
+    [3, 3, V3_REQUIRED_TABLES, 'current-v3'],
   ] as const)('accepts native %s + app %s as %s', (nativeVersion, appSchemaVersion, tables, expected) => {
     expect(classifyExistingSqliteState({
       nativeVersion,
@@ -31,8 +35,11 @@ describe('SQLite migration state', () => {
     [1, 1],
     [0, 2],
     [1, 2],
-    [3, 2],
+    [0, 3],
+    [1, 3],
     [2, 3],
+    [4, 3],
+    [3, 4],
   ])('rejects native %s + app %s', (nativeVersion, appSchemaVersion) => {
     expect(() => classifyExistingSqliteState({
       nativeVersion,
@@ -45,6 +52,14 @@ describe('SQLite migration state', () => {
     const tables = new Set(V1_REQUIRED_TABLES);
     tables.delete('reward_entries');
     expect(() => classifyExistingSqliteState({ nativeVersion: 0, appSchemaVersion: 1, tables })).toThrow(/reward_entries/);
+  });
+
+  it('requires ai_interactions for every native v3 state', () => {
+    expect(() => classifyExistingSqliteState({
+      nativeVersion: 3,
+      appSchemaVersion: 2,
+      tables: new Set(V2_REQUIRED_TABLES),
+    })).toThrow(/ai_interactions/);
   });
 
   it.each([

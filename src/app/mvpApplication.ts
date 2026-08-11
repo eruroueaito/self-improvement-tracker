@@ -31,6 +31,7 @@ import {
 } from './importExport';
 import { migrateSnapshot } from './migrations';
 import type { AppSnapshot, Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort } from './ports';
+import { assertEnvelopeTextWithinBudget, assertSnapshotWithinBudget } from './snapshotBudget';
 import { validateImportEnvelope } from './importValidation';
 import {
   clearDevelopmentSeedFacts,
@@ -78,7 +79,7 @@ export class MvpApplication {
 
   private emptySnapshot(): AppSnapshot {
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
       goals: [],
       activities: [],
       recommendationRuns: [],
@@ -86,6 +87,7 @@ export class MvpApplication {
       rewardEntries: [],
       companionProjection: emptyCompanionProjection(this.clock.now()),
       settings: createDefaultAppSettings(),
+      aiInteractions: [],
     };
   }
 
@@ -99,6 +101,7 @@ export class MvpApplication {
   }
 
   private async commit(next: AppSnapshot): Promise<void> {
+    assertSnapshotWithinBudget(next);
     await this.store.replace(next);
     this.snapshot = next;
   }
@@ -426,7 +429,7 @@ export class MvpApplication {
   }
 
   exportData(): string {
-    return JSON.stringify(buildExportEnvelope(this.current(), this.clock.now()), null, 2);
+    return JSON.stringify(buildExportEnvelope(this.current(), this.clock.now()));
   }
 
   async exportToFile(): Promise<void> {
@@ -448,7 +451,12 @@ export class MvpApplication {
     await this.exportFiles.save(this.recoveryExport.contents, filename);
   }
 
-  private prepareImport(serialized: string): { sourceVersion: 1 | 2; snapshot: AppSnapshot } {
+  private prepareImport(serialized: string): { sourceVersion: 1 | 2 | 3; snapshot: AppSnapshot } {
+    try {
+      assertEnvelopeTextWithinBudget(serialized);
+    } catch {
+      throw new ValidationError('导入文件超过 20 MiB 上限');
+    }
     let parsed: unknown;
     try {
       parsed = JSON.parse(serialized);

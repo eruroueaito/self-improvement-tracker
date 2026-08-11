@@ -14,10 +14,11 @@ import { LocalStorageStore } from './browser/localStorageStore';
 import { MemoryStore } from './memory/memoryStore';
 
 const snapshot = (): AppSnapshot => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   goals: [], activities: [], recommendationRuns: [], sessions: [], rewardEntries: [],
   companionProjection: emptyCompanionProjection(1),
   settings: createDefaultAppSettings(),
+  aiInteractions: [],
 });
 
 const contract = (name: string, create: () => DataStore) => {

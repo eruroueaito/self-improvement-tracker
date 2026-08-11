@@ -91,7 +91,7 @@ const reward = (id: string, goalId: string, delta: number): RewardLedgerEntry =>
 });
 
 const snapshot = (overrides: Partial<AppSnapshot> = {}): AppSnapshot => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   goals: [],
   activities: [],
   recommendationRuns: [],
@@ -105,6 +105,7 @@ const snapshot = (overrides: Partial<AppSnapshot> = {}): AppSnapshot => ({
     lastUpdatedAt: 100,
   },
   settings: createDefaultAppSettings(),
+  aiInteractions: [],
   ...overrides,
 });
 

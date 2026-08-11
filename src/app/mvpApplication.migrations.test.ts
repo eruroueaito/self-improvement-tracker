@@ -6,11 +6,14 @@
  * 注意事项：失败用例必须证明旧持久数据未被替换
  */
 import { describe, expect, it } from 'vitest';
-import { createDefaultAppSettings } from '../modules/settings/settings';
+import { createDefaultAppSettings, createDefaultAppSettingsV2 } from '../modules/settings/settings';
 import { createEmptyPersistedSnapshotV1 } from '../test/fixtures/persistedSnapshotV1';
+import { createTypicalPersistedSnapshotV1 } from '../test/fixtures/persistedSnapshotV1';
 import type { CurrentAppSnapshot, PersistedSnapshot } from './snapshots';
 import type { Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort } from './ports';
 import { MvpApplication } from './mvpApplication';
+import { canonicalJson, SNAPSHOT_MAX_BYTES, utf8ByteLength } from './snapshotBudget';
+import { migrateSnapshot } from './migrations';
 
 class ControlledStore implements DataStore {
   replaceCalls = 0;
@@ -48,17 +51,18 @@ describe('MvpApplication migration initialization', () => {
 
     const snapshot = await app.initialize();
 
-    expect(snapshot.schemaVersion).toBe(2);
+    expect(snapshot.schemaVersion).toBe(3);
     expect(snapshot.settings).toEqual(createDefaultAppSettings());
     expect(store.replaceCalls).toBe(1);
-    expect(store.persisted?.schemaVersion).toBe(2);
+    expect(store.persisted?.schemaVersion).toBe(3);
   });
 
   it('does not rewrite an already-current snapshot during initialization', async () => {
     const current: CurrentAppSnapshot = {
       ...createEmptyPersistedSnapshotV1(),
-      schemaVersion: 2,
+      schemaVersion: 3,
       settings: createDefaultAppSettings(),
+      aiInteractions: [],
     };
     const store = new ControlledStore(current);
 
@@ -100,7 +104,7 @@ describe('MvpApplication migration initialization', () => {
     await app.exportRecoveryToFile();
     expect(saved[0]).not.toContain('apiKey');
     expect(saved[0]).not.toContain('secret-value');
-    expect(JSON.parse(saved[0]!).data.settings).toEqual(createDefaultAppSettings());
+    expect(JSON.parse(saved[0]!).data.settings).toEqual(createDefaultAppSettingsV2());
   });
 
   it('keeps runtime and persisted settings unchanged when an update fails', async () => {
@@ -115,5 +119,22 @@ describe('MvpApplication migration initialization', () => {
 
     expect(app.getSnapshot().settings.theme).toBe('system');
     expect((store.persisted as CurrentAppSnapshot).settings.theme).toBe('system');
+  });
+
+  it('rejects an over-budget mutation before replacing the persisted snapshot', async () => {
+    const current = migrateSnapshot(createTypicalPersistedSnapshotV1()).snapshot;
+    const remainingBytes = SNAPSHOT_MAX_BYTES - utf8ByteLength(canonicalJson(current));
+    current.activities[0]!.contexts[0] += 'x'.repeat(remainingBytes - 100);
+    const store = new ControlledStore(current);
+    const app = createApp(store);
+    await app.initialize();
+
+    const changed = app.getSnapshot().settings;
+    changed.ai.provider.model = 'm'.repeat(160);
+    await expect(app.updateSettings(changed)).rejects.toThrow(/应用快照超过/);
+
+    expect(store.replaceCalls).toBe(0);
+    expect((store.persisted as CurrentAppSnapshot).settings.ai.provider.model).toBe('');
+    expect(app.getSnapshot().settings.ai.provider.model).toBe('');
   });
 });

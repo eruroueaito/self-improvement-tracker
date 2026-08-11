@@ -71,7 +71,7 @@ const createV1Envelope = (): string => {
 };
 
 describe('MvpApplication import preview and confirmation', () => {
-  it('previews v2 without writing and confirms with one replace', async () => {
+  it('previews v3 without writing and confirms with one replace', async () => {
     const serialized = await createV2Export();
     const store = new CountingStore();
     const app = createApp(store);
@@ -82,7 +82,7 @@ describe('MvpApplication import preview and confirmation', () => {
     );
     const writesBeforePreview = store.replaceCalls;
 
-    expect(app.previewImport(serialized)).toMatchObject({ sourceVersion: 2, goalCount: 1, activityCount: 1 });
+    expect(app.previewImport(serialized)).toMatchObject({ sourceVersion: 3, goalCount: 1, activityCount: 1 });
     expect(store.replaceCalls).toBe(writesBeforePreview);
     expect(app.getSnapshot().goals[0]?.title).toBe('本机旧目标');
 
@@ -100,7 +100,7 @@ describe('MvpApplication import preview and confirmation', () => {
 
     expect(app.previewImport(serialized)).toMatchObject({ sourceVersion: 1, settings: createDefaultAppSettings() });
     await app.confirmImport(serialized);
-    expect(app.getSnapshot().schemaVersion).toBe(2);
+    expect(app.getSnapshot().schemaVersion).toBe(3);
     expect(app.getSnapshot().settings).toEqual(createDefaultAppSettings());
     expect(app.getSnapshot().companionProjection.globalXp).toBe(0);
   });

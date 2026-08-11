@@ -6,9 +6,9 @@
  * 注意事项：脚本化连接不执行 SQL，不替代真实 Android 插件契约
  */
 import { describe, expect, it } from 'vitest';
-import { createDefaultAppSettings } from '../../modules/settings/settings';
+import { createDefaultAppSettings, createDefaultAppSettingsV2 } from '../../modules/settings/settings';
 import { SqliteStore, type SQLiteStoreConnection, type SQLiteStoreConnectionManager } from './sqliteStore';
-import { V1_REQUIRED_TABLES, V2_REQUIRED_TABLES } from './sqliteMigrationState';
+import { V1_REQUIRED_TABLES, V2_REQUIRED_TABLES, V3_REQUIRED_TABLES } from './sqliteMigrationState';
 
 interface ConnectionState {
   nativeVersion: number;
@@ -16,6 +16,7 @@ interface ConnectionState {
   tables: readonly string[];
   settings?: unknown;
   settingsId?: number;
+  aiInteractions?: unknown[];
   projection?: unknown;
 }
 
@@ -39,7 +40,7 @@ class ScriptedConnection implements SQLiteStoreConnection {
   async run(statement: string, values: unknown[] = []): Promise<void> {
     this.operations.push(`run:${statement}`);
     if (statement.includes('app_settings')) this.state.settings = JSON.parse(String(values[0]));
-    if (statement.includes('app_meta')) this.state.appSchemaVersion = 2;
+    if (statement.includes('app_meta')) this.state.appSchemaVersion = 3;
   }
 
   async query(statement: string) {
@@ -52,6 +53,9 @@ class ScriptedConnection implements SQLiteStoreConnection {
     }
     if (statement.includes('FROM app_settings ORDER BY id')) {
       return { values: this.state.settings === undefined ? [] : [{ id: this.state.settingsId ?? 1, payload: JSON.stringify(this.state.settings) }] };
+    }
+    if (statement.startsWith('SELECT payload FROM ai_interactions')) {
+      return { values: (this.state.aiInteractions ?? []).map((payload) => ({ payload: JSON.stringify(payload) })) };
     }
     if (statement.includes('FROM companion_projection ORDER BY id')) {
       return { values: this.state.projection === undefined ? [] : [{ id: 1, payload: JSON.stringify(this.state.projection) }] };
@@ -86,7 +90,7 @@ describe('SqliteStore initialization orchestration', () => {
   it('preflights a legacy database before registering the DDL upgrade', async () => {
     const manager = new ScriptedManager(true, [
       { nativeVersion: 0, appSchemaVersion: 1, tables: V1_REQUIRED_TABLES },
-      { nativeVersion: 2, appSchemaVersion: 1, tables: V2_REQUIRED_TABLES },
+      { nativeVersion: 3, appSchemaVersion: 1, tables: V3_REQUIRED_TABLES },
     ]);
     const store = new SqliteStore(manager);
 
@@ -100,9 +104,9 @@ describe('SqliteStore initialization orchestration', () => {
 
   it('initializes settings and app_meta only after proving a new database empty', async () => {
     const manager = new ScriptedManager(false, [{
-      nativeVersion: 2,
+      nativeVersion: 3,
       appSchemaVersion: 1,
-      tables: V2_REQUIRED_TABLES,
+      tables: V3_REQUIRED_TABLES,
     }]);
     const store = new SqliteStore(manager);
 
@@ -131,10 +135,11 @@ describe('SqliteStore initialization orchestration', () => {
 
   it('rejects invalid current settings during preflight', async () => {
     const manager = new ScriptedManager(true, [{
-      nativeVersion: 2,
-      appSchemaVersion: 2,
-      tables: V2_REQUIRED_TABLES,
+      nativeVersion: 3,
+      appSchemaVersion: 3,
+      tables: V3_REQUIRED_TABLES,
       settings: { ...createDefaultAppSettings(), token: 'secret-value' },
+      aiInteractions: [],
     }]);
 
     await expect(new SqliteStore(manager).initialize()).rejects.toThrow(/不受支持的字段/);
@@ -144,14 +149,67 @@ describe('SqliteStore initialization orchestration', () => {
 
   it('rejects a malformed settings singleton whose only row is not id 1', async () => {
     const manager = new ScriptedManager(true, [{
-      nativeVersion: 2,
-      appSchemaVersion: 2,
-      tables: V2_REQUIRED_TABLES,
+      nativeVersion: 3,
+      appSchemaVersion: 3,
+      tables: V3_REQUIRED_TABLES,
       settings: createDefaultAppSettings(),
       settingsId: 2,
+      aiInteractions: [],
     }]);
 
     await expect(new SqliteStore(manager).initialize()).rejects.toThrow(/id 必须为 1/);
     expect(manager.events).not.toContain('manager:addUpgrade');
+  });
+
+  it('loads current v3 settings and strict AI history', async () => {
+    const interaction = {
+      id: 'interaction-1', requestType: 'goal-draft', providerModel: 'model-1', schemaVersion: 'goal-draft-v1',
+      inputSummary: 'GoalDraft request (12 characters)', validatedOutput: null, startedAt: 1, durationMs: 2, result: 'timeout',
+    };
+    const manager = new ScriptedManager(true, [
+      {
+        nativeVersion: 3,
+        appSchemaVersion: 3,
+        tables: V3_REQUIRED_TABLES,
+        settings: createDefaultAppSettings(),
+        aiInteractions: [interaction],
+      },
+      {
+        nativeVersion: 3,
+        appSchemaVersion: 3,
+        tables: V3_REQUIRED_TABLES,
+        settings: createDefaultAppSettings(),
+        aiInteractions: [interaction],
+        projection: { globalXp: 0, level: 1, evolutionStage: 'seed', mood: 'idle', lastUpdatedAt: 1 },
+      },
+    ]);
+    const store = new SqliteStore(manager);
+
+    await store.initialize();
+    expect(await store.load()).toMatchObject({ schemaVersion: 3, aiInteractions: [interaction] });
+  });
+
+  it('keeps current v2 readable after native DDL reaches v3', async () => {
+    const projection = {
+      globalXp: 0,
+      level: 1,
+      evolutionStage: 'seed',
+      mood: 'idle',
+      lastUpdatedAt: 1,
+    };
+    const manager = new ScriptedManager(true, [
+      { nativeVersion: 2, appSchemaVersion: 2, tables: V2_REQUIRED_TABLES, settings: createDefaultAppSettingsV2() },
+      {
+        nativeVersion: 3,
+        appSchemaVersion: 2,
+        tables: V3_REQUIRED_TABLES,
+        settings: createDefaultAppSettingsV2(),
+        projection,
+      },
+    ]);
+    const store = new SqliteStore(manager);
+
+    await store.initialize();
+    expect(await store.load()).toMatchObject({ schemaVersion: 2, settings: createDefaultAppSettingsV2() });
   });
 });

@@ -1,6 +1,6 @@
 /**
  * 模块名称：版本化导入导出测试
- * 职责描述：验证 v2 白名单导出、v1/v2 预览输入与安全恢复导出的秘密边界
+ * 职责描述：验证 v3 白名单导出、v1/v2/v3 输入、AI history opt-in 与安全恢复边界
  * 输入/输出：构造可信和畸形快照，断言 envelope 版本、字段与失败行为
  * 依赖关系：Vitest、迁移器、导入校验与测试 fixture
  * 注意事项：普通领域文本中的 token 字样必须保留，只有未知结构和秘密配置键被拒绝或丢弃
@@ -8,17 +8,24 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultAppSettings } from '../modules/settings/settings';
 import { createTypicalPersistedSnapshotV1 } from '../test/fixtures/persistedSnapshotV1';
+import { createTypicalPersistedSnapshotV2 } from '../test/fixtures/persistedSnapshotV2';
 import { buildExportEnvelope, buildRecoveryExport, summarizeImport } from './importExport';
 import { validateImportEnvelope } from './importValidation';
 import { migrateSnapshot } from './migrations';
+import { canonicalJson, SNAPSHOT_MAX_BYTES, utf8ByteLength } from './snapshotBudget';
 
 const v1Envelope = (): Record<string, unknown> => {
   const { schemaVersion: _schemaVersion, ...data } = createTypicalPersistedSnapshotV1();
   return { format: 'self-improvement-tracker', version: 1, exportedAt: 10, data };
 };
 
+const v2Envelope = (): Record<string, unknown> => {
+  const { schemaVersion: _schemaVersion, ...data } = createTypicalPersistedSnapshotV2();
+  return { format: 'self-improvement-tracker', version: 2, exportedAt: 15, data };
+};
+
 describe('versioned import and export', () => {
-  it('accepts v1 and v2 envelopes and summarizes their migrated settings', () => {
+  it('accepts v1, v2 and v3 envelopes and summarizes their migrated settings', () => {
     const legacy = validateImportEnvelope(v1Envelope());
     const legacyCurrent = migrateSnapshot(legacy.snapshot).snapshot;
     expect(summarizeImport(legacy.sourceVersion, legacyCurrent)).toMatchObject({
@@ -28,14 +35,18 @@ describe('versioned import and export', () => {
       settings: createDefaultAppSettings(),
     });
 
+    const v2 = validateImportEnvelope(v2Envelope());
+    expect(v2.sourceVersion).toBe(2);
+    expect(migrateSnapshot(v2.snapshot).snapshot.settings.ai.goalDraftEnabled).toBe(false);
+
     legacyCurrent.settings.theme = 'dark';
     const currentEnvelope = buildExportEnvelope(legacyCurrent, 20);
     const current = validateImportEnvelope(currentEnvelope);
-    expect(current.sourceVersion).toBe(2);
+    expect(current.sourceVersion).toBe(3);
     expect(migrateSnapshot(current.snapshot).snapshot.settings.theme).toBe('dark');
   });
 
-  it('constructs a v2 export from nested allowlists', () => {
+  it('constructs a v3 export from nested allowlists with history excluded by default', () => {
     const current = migrateSnapshot(createTypicalPersistedSnapshotV1()).snapshot;
     const polluted = current as typeof current & {
       apiKey?: string;
@@ -52,7 +63,44 @@ describe('versioned import and export', () => {
     expect(serialized).not.toContain('goal-secret-value');
     expect(serialized).not.toContain('settings-secret-value');
     expect(serialized).not.toContain('nested-secret-value');
-    expect(JSON.parse(serialized).version).toBe(2);
+    expect(JSON.parse(serialized)).toMatchObject({ version: 3, aiHistoryIncluded: false, data: { aiInteractions: [] } });
+  });
+
+  it('includes strict AI history only through one explicit export option', () => {
+    const current = migrateSnapshot(createTypicalPersistedSnapshotV1()).snapshot;
+    current.aiInteractions.push({
+      id: 'interaction-1',
+      requestType: 'goal-draft',
+      providerModel: 'model-1',
+      schemaVersion: 'goal-draft-v1',
+      inputSummary: 'GoalDraft request (12 characters)',
+      validatedOutput: null,
+      startedAt: 1,
+      durationMs: 2,
+      result: 'timeout',
+    });
+
+    expect(buildExportEnvelope(current, 25).data.aiInteractions).toEqual([]);
+    const included = buildExportEnvelope(current, 26, { includeAiHistory: true });
+    expect(included.aiHistoryIncluded).toBe(true);
+    expect(included.data.aiInteractions).toHaveLength(1);
+
+    const forged = structuredClone(included);
+    forged.aiHistoryIncluded = false;
+    expect(() => validateImportEnvelope(forged)).toThrow(/声明不含 AI 历史/);
+  });
+
+  it('round-trips a valid snapshot close to the 16 MiB limit', () => {
+    const current = migrateSnapshot(createTypicalPersistedSnapshotV1()).snapshot;
+    const remainingBytes = SNAPSHOT_MAX_BYTES - utf8ByteLength(canonicalJson(current));
+    current.activities[0]!.contexts[0] += 'x'.repeat(remainingBytes - 100);
+
+    const serialized = JSON.stringify(buildExportEnvelope(current, 35));
+    const imported = validateImportEnvelope(JSON.parse(serialized));
+    const roundTripped = migrateSnapshot(imported.snapshot).snapshot;
+
+    expect(imported.sourceVersion).toBe(3);
+    expect(roundTripped.activities[0]!.contexts[0]).toBe(current.activities[0]!.contexts[0]);
   });
 
   it('uses default settings for recoverable v2 facts with unsafe settings', () => {
@@ -74,6 +122,24 @@ describe('versioned import and export', () => {
     expect(recovery?.contents).not.toContain('apiKey');
     expect(recovery?.contents).not.toContain('secret-value');
     expect(JSON.parse(recovery!.contents).data.settings).toEqual(createDefaultAppSettings());
+  });
+
+  it('recovers valid v3 facts without carrying corrupt AI history into the export', () => {
+    const current = migrateSnapshot(createTypicalPersistedSnapshotV1()).snapshot;
+    const unsafe = {
+      ...current,
+      aiInteractions: [{ id: 'bad', apiKey: 'secret-history-value' }],
+    };
+
+    const recovery = buildRecoveryExport(unsafe, 45);
+
+    expect(recovery).not.toBeNull();
+    expect(recovery?.sourceVersion).toBe(3);
+    expect(recovery?.contents).not.toContain('secret-history-value');
+    expect(JSON.parse(recovery!.contents)).toMatchObject({
+      aiHistoryIncluded: false,
+      data: { aiInteractions: [] },
+    });
   });
 
   it('rejects secret settings and prototype-pollution keys during normal import', () => {

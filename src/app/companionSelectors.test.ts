@@ -1,7 +1,7 @@
 /**
  * 模块名称：CompanionView selector 单元测试
  * 职责描述：验证运行时伙伴投影、解锁、心情优先级、时间边界与 Roll 不变性
- * 输入/输出：构造 schema v2 快照与显式时钟，断言无持久写入的伙伴视图
+ * 输入/输出：构造 schema v3 快照与显式时钟，断言无持久写入的伙伴视图
  * 依赖关系：Vitest、伙伴 selector、RollEngine 与领域事实类型
  * 注意事项：持久 CompanionProjection.mood 必须被忽略，future reversal 不能提前生效
  */
@@ -27,7 +27,7 @@ const activity: ActivityTemplate = {
 };
 
 const snapshot = (overrides: Partial<AppSnapshot> = {}): AppSnapshot => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   goals: [],
   activities: [],
   recommendationRuns: [],
@@ -35,6 +35,7 @@ const snapshot = (overrides: Partial<AppSnapshot> = {}): AppSnapshot => ({
   rewardEntries: [],
   companionProjection: { globalXp: 999, level: 99, evolutionStage: 'companion', mood: 'celebrating', lastUpdatedAt: 0 },
   settings: createDefaultAppSettings(),
+  aiInteractions: [],
   ...overrides,
 });
 

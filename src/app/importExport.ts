@@ -1,19 +1,29 @@
 /**
  * 模块名称：版本化导入导出
- * 职责描述：构造白名单备份、导入预览摘要与失败时的安全恢复导出
+ * 职责描述：构造 v3 白名单备份、导入预览摘要与按来源版本的安全恢复导出
  * 输入/输出：接收已校验快照或未知持久化值，返回版本化 envelope、摘要或安全恢复结果
  * 依赖关系：快照类型、事实校验、应用设置与领域类型
  * 注意事项：所有输出逐字段重建；未知键、Provider 凭据和临时 UI 状态不得透传
  */
 import type { FeedbackConfig } from '../modules/goals/types';
-import { createDefaultAppSettings, normalizeAppSettings, type AppSettings } from '../modules/settings/settings';
+import { normalizeAiInteractionHistory } from '../modules/ai/interactionLog';
+import {
+  createDefaultAppSettings,
+  createDefaultAppSettingsV2,
+  normalizeAppSettings,
+  normalizeAppSettingsV2,
+  type AppSettings,
+  type AppSettingsV2,
+} from '../modules/settings/settings';
 import { validateSnapshotFacts } from './importValidation';
+import { assertEnvelopeTextWithinBudget, assertSnapshotWithinBudget } from './snapshotBudget';
 import type { CurrentAppSnapshot, SnapshotFacts } from './snapshots';
 
-export interface ExportEnvelopeV2 {
+export interface ExportEnvelopeV3 {
   format: 'self-improvement-tracker';
-  version: 2;
+  version: 3;
   exportedAt: number;
+  aiHistoryIncluded: boolean;
   data: Omit<CurrentAppSnapshot, 'schemaVersion'>;
 }
 
@@ -24,8 +34,15 @@ interface ExportEnvelopeV1 {
   data: SnapshotFacts;
 }
 
+interface ExportEnvelopeV2 {
+  format: 'self-improvement-tracker';
+  version: 2;
+  exportedAt: number;
+  data: SnapshotFacts & { settings: AppSettingsV2 };
+}
+
 export interface ImportPreview {
-  sourceVersion: 1 | 2;
+  sourceVersion: 1 | 2 | 3;
   goalCount: number;
   activityCount: number;
   sessionCount: number;
@@ -35,7 +52,7 @@ export interface ImportPreview {
 }
 
 export interface RecoveryExport {
-  sourceVersion: 1 | 2;
+  sourceVersion: 1 | 2 | 3;
   settingsRecovered: boolean | null;
   contents: string;
 }
@@ -49,6 +66,25 @@ const copyFeedback = (feedback: FeedbackConfig): FeedbackConfig => {
 };
 
 const copySettings = (settings: AppSettings): AppSettings => ({
+  theme: settings.theme,
+  motion: settings.motion,
+  hapticsEnabled: settings.hapticsEnabled,
+  notificationsEnabled: settings.notificationsEnabled,
+  ai: {
+    enabled: settings.ai.enabled,
+    goalDraftEnabled: settings.ai.goalDraftEnabled,
+    historyEnabled: settings.ai.historyEnabled,
+    provider: {
+      protocol: settings.ai.provider.protocol,
+      baseUrl: settings.ai.provider.baseUrl,
+      model: settings.ai.provider.model,
+      requestTimeoutMs: settings.ai.provider.requestTimeoutMs,
+      structuredOutputMode: settings.ai.provider.structuredOutputMode,
+    },
+  },
+});
+
+const copySettingsV2 = (settings: AppSettingsV2): AppSettingsV2 => ({
   theme: settings.theme,
   motion: settings.motion,
   hapticsEnabled: settings.hapticsEnabled,
@@ -164,18 +200,34 @@ export const buildWhitelistedFacts = (snapshot: SnapshotFacts): SnapshotFacts =>
   },
 });
 
-export const buildExportEnvelope = (snapshot: CurrentAppSnapshot, exportedAt: number): ExportEnvelopeV2 => ({
-  format: 'self-improvement-tracker',
-  version: 2,
-  exportedAt,
-  data: {
-    ...buildWhitelistedFacts(snapshot),
-    settings: copySettings(snapshot.settings),
-  },
-});
+const assertEnvelopeObjectWithinBudget = (envelope: unknown): void => {
+  assertEnvelopeTextWithinBudget(JSON.stringify(envelope));
+};
+
+export const buildExportEnvelope = (
+  snapshot: CurrentAppSnapshot,
+  exportedAt: number,
+  options: { includeAiHistory?: boolean } = {},
+): ExportEnvelopeV3 => {
+  assertSnapshotWithinBudget(snapshot);
+  const aiHistoryIncluded = options.includeAiHistory === true;
+  const envelope: ExportEnvelopeV3 = {
+    format: 'self-improvement-tracker',
+    version: 3,
+    exportedAt,
+    aiHistoryIncluded,
+    data: {
+      ...buildWhitelistedFacts(snapshot),
+      settings: copySettings(snapshot.settings),
+      aiInteractions: aiHistoryIncluded ? normalizeAiInteractionHistory(snapshot.aiInteractions) : [],
+    },
+  };
+  assertEnvelopeObjectWithinBudget(envelope);
+  return envelope;
+};
 
 export const summarizeImport = (
-  sourceVersion: 1 | 2,
+  sourceVersion: 1 | 2 | 3,
   snapshot: CurrentAppSnapshot,
 ): ImportPreview => ({
   sourceVersion,
@@ -190,7 +242,7 @@ export const summarizeImport = (
 export const buildRecoveryExport = (value: unknown, exportedAt: number): RecoveryExport | null => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const snapshot = value as Record<string, unknown>;
-  if (snapshot.schemaVersion !== 1 && snapshot.schemaVersion !== 2) return null;
+  if (snapshot.schemaVersion !== 1 && snapshot.schemaVersion !== 2 && snapshot.schemaVersion !== 3) return null;
 
   let facts: SnapshotFacts;
   try {
@@ -206,7 +258,29 @@ export const buildRecoveryExport = (value: unknown, exportedAt: number): Recover
       exportedAt,
       data: facts,
     };
-    return { sourceVersion: 1, settingsRecovered: null, contents: JSON.stringify(envelope, null, 2) };
+    const contents = JSON.stringify(envelope);
+    try { assertEnvelopeTextWithinBudget(contents); } catch { return null; }
+    return { sourceVersion: 1, settingsRecovered: null, contents };
+  }
+
+  if (snapshot.schemaVersion === 2) {
+    let settings: AppSettingsV2;
+    let settingsRecovered = true;
+    try {
+      settings = normalizeAppSettingsV2(snapshot.settings);
+    } catch {
+      settings = createDefaultAppSettingsV2();
+      settingsRecovered = false;
+    }
+    const envelope: ExportEnvelopeV2 = {
+      format: 'self-improvement-tracker',
+      version: 2,
+      exportedAt,
+      data: { ...facts, settings: copySettingsV2(settings) },
+    };
+    const contents = JSON.stringify(envelope);
+    try { assertEnvelopeTextWithinBudget(contents); } catch { return null; }
+    return { sourceVersion: 2, settingsRecovered, contents };
   }
 
   let settings: AppSettings;
@@ -217,11 +291,14 @@ export const buildRecoveryExport = (value: unknown, exportedAt: number): Recover
     settings = createDefaultAppSettings();
     settingsRecovered = false;
   }
-  const envelope: ExportEnvelopeV2 = {
+  const envelope: ExportEnvelopeV3 = {
     format: 'self-improvement-tracker',
-    version: 2,
+    version: 3,
     exportedAt,
-    data: { ...facts, settings: copySettings(settings) },
+    aiHistoryIncluded: false,
+    data: { ...facts, settings: copySettings(settings), aiInteractions: [] },
   };
-  return { sourceVersion: 2, settingsRecovered, contents: JSON.stringify(envelope, null, 2) };
+  const contents = JSON.stringify(envelope);
+  try { assertEnvelopeTextWithinBudget(contents); } catch { return null; }
+  return { sourceVersion: 3, settingsRecovered, contents };
 };

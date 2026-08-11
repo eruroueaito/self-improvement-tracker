@@ -67,7 +67,7 @@ describe('MvpApplication offline loop', () => {
     await app.clearAllData();
     expect(app.getSnapshot().goals).toHaveLength(0);
     const preview = app.previewImport(exported);
-    expect(preview).toMatchObject({ sourceVersion: 2, goalCount: 1, activityCount: 1, sessionCount: 1, rewardCount: 2 });
+    expect(preview).toMatchObject({ sourceVersion: 3, goalCount: 1, activityCount: 1, sessionCount: 1, rewardCount: 2 });
     expect(app.getSnapshot().goals).toHaveLength(0);
     await app.confirmImport(exported);
     expect(app.getSnapshot().goals[0]?.title).toBe('阅读计划');

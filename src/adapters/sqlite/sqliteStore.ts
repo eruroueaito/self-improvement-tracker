@@ -1,13 +1,18 @@
 /**
  * 模块名称：Android SQLite 数据适配器
  * 职责描述：预检双版本状态、升级 DDL，并原子持久化当前应用快照
- * 输入/输出：load 返回 v1/v2 持久化联合，replace 只接收当前 v2 快照
- * 依赖关系：Capacitor Community SQLite、应用端口、设置校验与事务 writer
+ * 输入/输出：load 返回 v1/v2/v3 持久化联合，replace 只接收当前 v3 快照
+ * 依赖关系：Capacitor Community SQLite、应用端口、版本化设置、AI history 与事务 writer
  * 注意事项：未知迁移状态必须保留数据库并拒绝启动，绝不静默清库
  */
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import type { CurrentAppSnapshot, DataStore, PersistedSnapshot } from '../../app/ports';
-import { createDefaultAppSettings, normalizeAppSettings } from '../../modules/settings/settings';
+import { normalizeAiInteractionHistory } from '../../modules/ai/interactionLog';
+import {
+  createDefaultAppSettings,
+  normalizeAppSettings,
+  normalizeAppSettingsV2,
+} from '../../modules/settings/settings';
 import {
   APP_SCHEMA_VERSION,
   classifyExistingSqliteState,
@@ -16,6 +21,7 @@ import {
   SqliteDataIntegrityError,
   V1_REQUIRED_TABLES,
   V2_REQUIRED_TABLES,
+  V3_REQUIRED_TABLES,
   type ExistingSqliteState,
 } from './sqliteMigrationState';
 import {
@@ -37,10 +43,15 @@ const BASE_SCHEMA = `
   CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
 `;
 
-const DDL_UPGRADE_V2 = [{
-  toVersion: SQLITE_NATIVE_VERSION,
+const DDL_UPGRADES = [{
+  toVersion: 2,
   statements: [
     'CREATE TABLE IF NOT EXISTS app_settings (id INTEGER PRIMARY KEY CHECK (id = 1), payload TEXT NOT NULL);',
+  ],
+}, {
+  toVersion: 3,
+  statements: [
+    'CREATE TABLE IF NOT EXISTS ai_interactions (id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL);',
   ],
 }];
 
@@ -106,7 +117,7 @@ export class SqliteStore implements DataStore {
     if (typeof exists.result !== 'boolean') throw new SqliteDataIntegrityError('无法确认 SQLite 数据库是否存在');
 
     const existingState = exists.result ? await this.inspectExistingDatabase() : null;
-    await this.sqlite.addUpgradeStatement(DATABASE_NAME, DDL_UPGRADE_V2);
+    await this.sqlite.addUpgradeStatement(DATABASE_NAME, DDL_UPGRADES);
 
     const database = await this.sqlite.createConnection(
       DATABASE_NAME,
@@ -119,7 +130,7 @@ export class SqliteStore implements DataStore {
       await database.open();
       await database.execute(BASE_SCHEMA);
       await this.assertNativeVersion(database, SQLITE_NATIVE_VERSION);
-      await this.assertRequiredTableShapes(database, V2_REQUIRED_TABLES);
+      await this.assertRequiredTableShapes(database, V3_REQUIRED_TABLES);
       if (existingState === null) await this.initializeNewDatabase(database);
       this.database = database;
     } catch (error) {
@@ -144,11 +155,17 @@ export class SqliteStore implements DataStore {
       const metaRows = rowsOf(await connection.query("SELECT value FROM app_meta WHERE key = 'schema_version'"));
       const appSchemaVersion = parseAppSchemaVersion(metaRows);
       const state = classifyExistingSqliteState({ nativeVersion, appSchemaVersion, tables });
-      await this.assertRequiredTableShapes(
-        connection,
-        state === 'legacy-v1' ? V1_REQUIRED_TABLES : V2_REQUIRED_TABLES,
-      );
-      if (state === 'current-v2') await this.readSettings(connection);
+      const requiredTables = state === 'legacy-v1'
+        ? V1_REQUIRED_TABLES
+        : state === 'retry-v1-native-v2' || state === 'current-v2'
+          ? V2_REQUIRED_TABLES
+          : V3_REQUIRED_TABLES;
+      await this.assertRequiredTableShapes(connection, requiredTables);
+      if (state === 'current-v2' || state === 'retry-v2-native-v3') await this.readSettingsV2(connection);
+      if (state === 'current-v3') {
+        await this.readSettingsV3(connection);
+        await this.readAiInteractions(connection);
+      }
       await this.closeConnection(connection);
       return state;
     } catch (error) {
@@ -219,7 +236,7 @@ export class SqliteStore implements DataStore {
   }
 
   private async initializeNewDatabase(connection: SQLiteStoreConnection): Promise<void> {
-    await this.assertTablesEmpty(connection, V2_REQUIRED_TABLES);
+    await this.assertTablesEmpty(connection, V3_REQUIRED_TABLES);
     await connection.beginTransaction();
     try {
       await connection.run(
@@ -228,8 +245,8 @@ export class SqliteStore implements DataStore {
         false,
       );
       await connection.run(
-        "INSERT INTO app_meta(key, value) VALUES ('schema_version', '2')",
-        [],
+        "INSERT INTO app_meta(key, value) VALUES ('schema_version', ?)",
+        [String(APP_SCHEMA_VERSION)],
         false,
       );
       await connection.commitTransaction();
@@ -276,14 +293,29 @@ export class SqliteStore implements DataStore {
     return parsePayload(row.payload, table);
   }
 
-  private async readSettings(connection: SQLiteStoreConnection) {
+  private async readSettingsV2(connection: SQLiteStoreConnection) {
     const payload = await this.readSingletonPayload(connection, 'app_settings');
     if (payload === null) throw new SqliteDataIntegrityError('schema v2 缺少 app_settings singleton');
+    return normalizeAppSettingsV2(payload);
+  }
+
+  private async readSettingsV3(connection: SQLiteStoreConnection) {
+    const payload = await this.readSingletonPayload(connection, 'app_settings');
+    if (payload === null) throw new SqliteDataIntegrityError('schema v3 缺少 app_settings singleton');
     return normalizeAppSettings(payload);
   }
 
+  private async readAiInteractions(connection: SQLiteStoreConnection) {
+    const result = await connection.query('SELECT payload FROM ai_interactions ORDER BY id');
+    const payloads = rowsOf(result).map((row, index) => {
+      const record = recordOf(row, `ai_interactions[${index}]`);
+      return parsePayload(record.payload, `ai_interactions[${index}]`);
+    });
+    return normalizeAiInteractionHistory(payloads);
+  }
+
   private async factsAreEmpty(connection: SQLiteStoreConnection): Promise<boolean> {
-    for (const table of [...FACT_TABLES, 'companion_projection'] as const) {
+    for (const table of [...FACT_TABLES, 'companion_projection', 'ai_interactions'] as const) {
       const rows = rowsOf(await connection.query(`SELECT COUNT(*) AS row_count FROM ${table}`));
       if (rows.length !== 1 || Number(recordOf(rows[0], `${table} count`).row_count) !== 0) return false;
     }
@@ -293,7 +325,7 @@ export class SqliteStore implements DataStore {
   async load(): Promise<PersistedSnapshot | null> {
     const connection = this.ready();
     const schemaVersion = await this.readMetaVersion(connection);
-    if (schemaVersion !== 1 && schemaVersion !== APP_SCHEMA_VERSION) {
+    if (schemaVersion !== 1 && schemaVersion !== 2 && schemaVersion !== APP_SCHEMA_VERSION) {
       throw new SqliteDataIntegrityError(`不支持的应用 schema：${schemaVersion}`);
     }
 
@@ -313,7 +345,13 @@ export class SqliteStore implements DataStore {
     };
 
     if (schemaVersion === 1) return { schemaVersion: 1, ...facts };
-    return { schemaVersion: APP_SCHEMA_VERSION, ...facts, settings: await this.readSettings(connection) };
+    if (schemaVersion === 2) return { schemaVersion: 2, ...facts, settings: await this.readSettingsV2(connection) };
+    return {
+      schemaVersion: APP_SCHEMA_VERSION,
+      ...facts,
+      settings: await this.readSettingsV3(connection),
+      aiInteractions: await this.readAiInteractions(connection),
+    };
   }
 
   async replace(snapshot: CurrentAppSnapshot): Promise<void> {
