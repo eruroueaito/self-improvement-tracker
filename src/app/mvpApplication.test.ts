@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { MemoryStore } from '../adapters/memory/memoryStore';
+import { SessionSecretStore } from '../adapters/secrets/sessionSecretStore';
 import type { Clock, ExportFilePort, IdGenerator, NotificationPort } from './ports';
 import { MvpApplication } from './mvpApplication';
 
@@ -29,7 +30,9 @@ const exportFiles: ExportFilePort = { async save() {} };
 describe('MvpApplication offline loop', () => {
   it('persists a full idempotent loop and restores it through export/import', async () => {
     const clock = new FakeClock();
-    const app = new MvpApplication(new MemoryStore(), clock, new FakeIds(), notifications, exportFiles);
+    const app = new MvpApplication(
+      new MemoryStore(), clock, new FakeIds(), notifications, exportFiles, new SessionSecretStore(),
+    );
     await app.initialize();
     await app.createGoal(
       { title: '阅读', importance: 4, feedback: { type: 'cumulative', unit: 'times' }, defaultEnergyCost: 2 },
@@ -82,7 +85,9 @@ describe('MvpApplication offline loop', () => {
       async scheduleCountdown(sessionId) { scheduled.push(sessionId); },
       async cancelCountdown() {},
     };
-    const app = new MvpApplication(new MemoryStore(), clock, new FakeIds(), notificationSpy, exportFiles);
+    const app = new MvpApplication(
+      new MemoryStore(), clock, new FakeIds(), notificationSpy, exportFiles, new SessionSecretStore(),
+    );
     await app.initialize();
     await app.createGoal(
       { title: '无通知目标', importance: 3, feedback: { type: 'experience' }, defaultEnergyCost: 2 },

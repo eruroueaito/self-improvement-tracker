@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { createDefaultAppSettings } from '../modules/settings/settings';
+import { SessionSecretStore } from '../adapters/secrets/sessionSecretStore';
 import { createTypicalPersistedSnapshotV1 } from '../test/fixtures/persistedSnapshotV1';
 import type { CurrentAppSnapshot, PersistedSnapshot } from './snapshots';
 import type { Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort } from './ports';
@@ -48,7 +49,7 @@ const notifications: NotificationPort = {
 const exportFiles: ExportFilePort = { async save() {} };
 
 const createApp = (store: CountingStore, clock = new FakeClock()): MvpApplication =>
-  new MvpApplication(store, clock, new FakeIds(), notifications, exportFiles);
+  new MvpApplication(store, clock, new FakeIds(), notifications, exportFiles, new SessionSecretStore());
 
 const createV2Export = async (): Promise<string> => {
   const app = createApp(new CountingStore());

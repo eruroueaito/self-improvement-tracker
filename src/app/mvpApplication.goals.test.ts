@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { MemoryStore } from '../adapters/memory/memoryStore';
+import { SessionSecretStore } from '../adapters/secrets/sessionSecretStore';
 import type { ActivityInput, GoalInput } from '../modules/goals/types';
 import type { Clock, CurrentAppSnapshot, ExportFilePort, IdGenerator, NotificationPort } from './ports';
 import { MvpApplication } from './mvpApplication';
@@ -56,7 +57,7 @@ const activityInput = (title: string): ActivityInput => ({
 const setup = async () => {
   const clock = new FakeClock();
   const store = new ControlledStore();
-  const app = new MvpApplication(store, clock, new FakeIds(), notifications, exportFiles);
+  const app = new MvpApplication(store, clock, new FakeIds(), notifications, exportFiles, new SessionSecretStore());
   await app.initialize();
   store.replaceCalls = 0;
   return { app, clock, store };

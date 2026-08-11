@@ -6,6 +6,7 @@
  * 注意事项：失败用例必须证明旧持久数据未被替换
  */
 import { describe, expect, it } from 'vitest';
+import { SessionSecretStore } from '../adapters/secrets/sessionSecretStore';
 import { createDefaultAppSettings, createDefaultAppSettingsV2 } from '../modules/settings/settings';
 import { createEmptyPersistedSnapshotV1 } from '../test/fixtures/persistedSnapshotV1';
 import { createTypicalPersistedSnapshotV1 } from '../test/fixtures/persistedSnapshotV1';
@@ -42,7 +43,7 @@ const notifications: NotificationPort = {
 };
 const exportFiles: ExportFilePort = { async save() {} };
 const createApp = (store: DataStore, files: ExportFilePort = exportFiles) =>
-  new MvpApplication(store, clock, ids, notifications, files);
+  new MvpApplication(store, clock, ids, notifications, files, new SessionSecretStore());
 
 describe('MvpApplication migration initialization', () => {
   it('migrates v1 once and persists the current snapshot', async () => {

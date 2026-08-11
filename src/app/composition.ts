@@ -10,6 +10,8 @@ import { CryptoIdGenerator, SystemClock } from '../adapters/clock/systemServices
 import { LocalStorageStore } from '../adapters/browser/localStorageStore';
 import { BrowserExportService, NativeExportService } from '../adapters/files/exportServices';
 import { NativeNotificationService, NoopNotificationService } from '../adapters/notifications/notificationServices';
+import { NativeSecretStore } from '../adapters/secrets/nativeSecretStore';
+import { SessionSecretStore } from '../adapters/secrets/sessionSecretStore';
 import { SqliteStore } from '../adapters/sqlite/sqliteStore';
 import { MvpApplication } from './mvpApplication';
 
@@ -21,5 +23,6 @@ export const createMvpApplication = (): MvpApplication => {
     new CryptoIdGenerator(),
     native ? new NativeNotificationService() : new NoopNotificationService(),
     native ? new NativeExportService() : new BrowserExportService(),
+    native ? new NativeSecretStore() : new SessionSecretStore(),
   );
 };

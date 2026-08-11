@@ -22,6 +22,7 @@ import {
 } from '../modules/sessions/sessionMachine';
 import type { Session, SessionEndAction, SettlementInput, TimerMode } from '../modules/sessions/types';
 import { createDefaultAppSettings, normalizeAppSettings, type AppSettings } from '../modules/settings/settings';
+import type { ProviderBinding, ProviderCredentials } from '../modules/ai/credentials';
 import {
   buildExportEnvelope,
   buildRecoveryExport,
@@ -30,7 +31,7 @@ import {
   type RecoveryExport,
 } from './importExport';
 import { migrateSnapshot } from './migrations';
-import type { AppSnapshot, Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort } from './ports';
+import type { AppSnapshot, Clock, DataStore, ExportFilePort, IdGenerator, NotificationPort, SecretStore } from './ports';
 import { assertEnvelopeTextWithinBudget, assertSnapshotWithinBudget } from './snapshotBudget';
 import { validateImportEnvelope } from './importValidation';
 import {
@@ -55,6 +56,7 @@ export class MvpApplication {
     private readonly ids: IdGenerator,
     private readonly notifications: NotificationPort,
     private readonly exportFiles: ExportFilePort,
+    private readonly secretStore: SecretStore,
   ) {}
 
   async initialize(): Promise<AppSnapshot> {
@@ -426,6 +428,23 @@ export class MvpApplication {
     const next = this.getSnapshot();
     next.settings = normalizeAppSettings(settings);
     await this.commit(next);
+  }
+
+  private currentProviderBinding(): ProviderBinding {
+    const provider = this.current().settings.ai.provider;
+    return { protocol: provider.protocol, baseUrl: provider.baseUrl };
+  }
+
+  async saveProviderCredentials(credentials: ProviderCredentials): Promise<void> {
+    await this.secretStore.writeProviderCredentials(this.currentProviderBinding(), credentials);
+  }
+
+  async hasProviderCredentials(): Promise<boolean> {
+    return this.secretStore.hasProviderCredentials(this.currentProviderBinding());
+  }
+
+  async deleteProviderCredentials(): Promise<void> {
+    await this.secretStore.deleteProviderCredentials();
   }
 
   exportData(): string {
