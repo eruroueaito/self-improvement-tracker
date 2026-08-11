@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { MemoryStore } from '../adapters/memory/memoryStore';
-import type { ActivityDraft, GoalDraft } from '../modules/goals/types';
+import type { ActivityInput, GoalInput } from '../modules/goals/types';
 import type { Clock, CurrentAppSnapshot, ExportFilePort, IdGenerator, NotificationPort } from './ports';
 import { MvpApplication } from './mvpApplication';
 
@@ -40,13 +40,13 @@ const notifications: NotificationPort = {
   async cancelCountdown() {},
 };
 const exportFiles: ExportFilePort = { async save() {} };
-const goalDraft = (title: string): GoalDraft => ({
+const goalInput = (title: string): GoalInput => ({
   title,
   importance: 3,
   feedback: { type: 'experience' },
   defaultEnergyCost: 2,
 });
-const activityDraft = (title: string): ActivityDraft => ({
+const activityInput = (title: string): ActivityInput => ({
   title,
   minimumMinutes: 10,
   maximumMinutes: 30,
@@ -65,13 +65,13 @@ const setup = async () => {
 describe('MvpApplication Goal and Activity commands', () => {
   it('updates one Goal without changing any Activity', async () => {
     const { app, clock } = await setup();
-    const created = await app.createGoal(goalDraft('阅读'), activityDraft('读十页'));
-    await app.createActivity(created.goal.id, activityDraft('整理笔记'));
+    const created = await app.createGoal(goalInput('阅读'), activityInput('读十页'));
+    await app.createActivity(created.goal.id, activityInput('整理笔记'));
     const activitiesBefore = app.getSnapshot().activities;
 
     clock.value += 1_000;
     await app.updateGoal(created.goal.id, {
-      ...goalDraft('阅读计划'),
+      ...goalInput('阅读计划'),
       description: '每天推进',
       importance: 5,
     });
@@ -83,11 +83,11 @@ describe('MvpApplication Goal and Activity commands', () => {
 
   it('creates an Activity with defaults and does not write for a missing Goal', async () => {
     const { app, clock, store } = await setup();
-    const created = await app.createGoal(goalDraft('运动'), activityDraft('热身'));
+    const created = await app.createGoal(goalInput('运动'), activityInput('热身'));
     store.replaceCalls = 0;
     clock.value += 2_000;
 
-    const activity = await app.createActivity(created.goal.id, activityDraft('慢跑'));
+    const activity = await app.createActivity(created.goal.id, activityInput('慢跑'));
     expect(activity).toMatchObject({
       id: 'id-3',
       goalId: created.goal.id,
@@ -103,25 +103,25 @@ describe('MvpApplication Goal and Activity commands', () => {
     expect(store.replaceCalls).toBe(1);
 
     const before = app.getSnapshot();
-    await expect(app.createActivity('missing-goal', activityDraft('无效活动'))).rejects.toThrow(/目标不存在/);
+    await expect(app.createActivity('missing-goal', activityInput('无效活动'))).rejects.toThrow(/目标不存在/);
     expect(store.replaceCalls).toBe(1);
     expect(app.getSnapshot()).toEqual(before);
   });
 
   it('rejects cross-Goal updates and preserves immutable Activity fields', async () => {
     const { app, clock, store } = await setup();
-    const first = await app.createGoal(goalDraft('目标一'), activityDraft('活动一'));
-    const second = await app.createGoal(goalDraft('目标二'), activityDraft('活动二'));
+    const first = await app.createGoal(goalInput('目标一'), activityInput('活动一'));
+    const second = await app.createGoal(goalInput('目标二'), activityInput('活动二'));
     store.replaceCalls = 0;
     const before = app.getSnapshot();
 
-    await expect(app.updateActivity(second.goal.id, first.activity.id, activityDraft('越权修改'))).rejects.toThrow(/活动不存在或不属于该目标/);
+    await expect(app.updateActivity(second.goal.id, first.activity.id, activityInput('越权修改'))).rejects.toThrow(/活动不存在或不属于该目标/);
     expect(store.replaceCalls).toBe(0);
     expect(app.getSnapshot()).toEqual(before);
 
     clock.value += 3_000;
     await app.updateActivity(first.goal.id, first.activity.id, {
-      ...activityDraft('活动一（更新）'),
+      ...activityInput('活动一（更新）'),
       contexts: ['home'],
       rewardWeight: 1.5,
     });
@@ -137,7 +137,7 @@ describe('MvpApplication Goal and Activity commands', () => {
 
   it('archives and restores an Activity idempotently', async () => {
     const { app, clock, store } = await setup();
-    const created = await app.createGoal(goalDraft('写作'), activityDraft('写草稿'));
+    const created = await app.createGoal(goalInput('写作'), activityInput('写草稿'));
     store.replaceCalls = 0;
     clock.value += 4_000;
 
@@ -156,12 +156,12 @@ describe('MvpApplication Goal and Activity commands', () => {
 
   it('keeps runtime and persisted snapshots unchanged when replace fails', async () => {
     const { app, store } = await setup();
-    const created = await app.createGoal(goalDraft('稳定目标'), activityDraft('稳定活动'));
+    const created = await app.createGoal(goalInput('稳定目标'), activityInput('稳定活动'));
     const runtimeBefore = app.getSnapshot();
     const persistedBefore = await store.load();
     store.failNextReplace = true;
 
-    await expect(app.updateGoal(created.goal.id, goalDraft('不应提交'))).rejects.toThrow('replace failed');
+    await expect(app.updateGoal(created.goal.id, goalInput('不应提交'))).rejects.toThrow('replace failed');
     expect(app.getSnapshot()).toEqual(runtimeBefore);
     expect(await store.load()).toEqual(persistedBefore);
   });
@@ -179,7 +179,7 @@ describe('MvpApplication Goal and Activity commands', () => {
     expect(store.replaceCalls).toBe(1);
     expect(app.getSnapshot()).toEqual(beforeConflict);
 
-    const user = await app.createGoal(goalDraft('用户目标'), activityDraft('用户活动'));
+    const user = await app.createGoal(goalInput('用户目标'), activityInput('用户活动'));
     expect(user.goal.id).toBe('id-1');
     store.replaceCalls = 0;
     const removed = await app.clearDevelopmentSeed();

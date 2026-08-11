@@ -6,17 +6,17 @@
  * 注意事项：覆盖会影响持久数据合法性的关键边界
  */
 import { describe, expect, it } from 'vitest';
-import { normalizeActivityDraft, normalizeContexts, normalizeGoalDraft } from './validation';
+import { normalizeActivityInput, normalizeContexts, normalizeGoalInput } from './validation';
 
 describe('goal validation', () => {
   it('normalizes text, contexts and defaults', () => {
-    const goal = normalizeGoalDraft({
+    const goal = normalizeGoalInput({
       title: '  阅读  ',
       importance: 3,
       feedback: { type: 'cumulative', unit: 'times' },
       defaultEnergyCost: 2,
     });
-    const activity = normalizeActivityDraft({
+    const activity = normalizeActivityInput({
       title: '  读十页 ',
       minimumMinutes: 10,
       maximumMinutes: 30,
@@ -32,8 +32,8 @@ describe('goal validation', () => {
   });
 
   it('rejects impossible minute ranges and progress bounds', () => {
-    expect(() => normalizeActivityDraft({ title: 'x', minimumMinutes: 31, maximumMinutes: 30, energyCost: 3 })).toThrow(/最长时长/);
-    expect(() => normalizeGoalDraft({
+    expect(() => normalizeActivityInput({ title: 'x', minimumMinutes: 31, maximumMinutes: 30, energyCost: 3 })).toThrow(/最长时长/);
+    expect(() => normalizeGoalInput({
       title: 'x', importance: 3, defaultEnergyCost: 3,
       feedback: { type: 'progress', baseline: 11, target: 10, unit: '页' },
     })).toThrow(/当前起点/);

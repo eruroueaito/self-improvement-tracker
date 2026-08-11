@@ -1,12 +1,12 @@
 /**
  * 模块名称：Goal 创建与编辑表单
  * 职责描述：提供紧凑 Goal 输入、首 Activity 快速创建和可展开高级设置
- * 输入/输出：接收可选 Goal 初值，输出标准化前的 GoalDraft 与首 ActivityDraft
+ * 输入/输出：接收可选 Goal 初值，输出标准化前的 GoalInput 与首 ActivityInput
  * 依赖关系：React、Goal/Activity 领域类型
  * 注意事项：只有提交命令成功后才调用 onDone，失败时必须保留全部受控输入
  */
 import { useState, type FormEvent } from 'react';
-import type { ActivityDraft, FeedbackConfig, Goal, GoalDraft } from '../../modules/goals/types';
+import type { ActivityInput, FeedbackConfig, Goal, GoalInput } from '../../modules/goals/types';
 
 type FeedbackChoice = 'times' | 'minutes' | 'progress' | 'experience';
 
@@ -15,8 +15,8 @@ type GoalFormProps = {
   onCancel: () => void;
   onDone: () => void;
 } & (
-  | { mode: 'create'; onSubmit: (goal: GoalDraft, activity: ActivityDraft) => Promise<boolean> }
-  | { mode: 'edit'; goal: Goal; onSubmit: (goal: GoalDraft) => Promise<boolean> }
+  | { mode: 'create'; onSubmit: (goal: GoalInput, activity: ActivityInput) => Promise<boolean> }
+  | { mode: 'edit'; goal: Goal; onSubmit: (goal: GoalInput) => Promise<boolean> }
 );
 
 const feedbackChoice = (goal: Goal | null): FeedbackChoice => {
@@ -55,7 +55,7 @@ export function GoalForm(props: GoalFormProps) {
 
   const submit = async (event: FormEvent): Promise<void> => {
     event.preventDefault();
-    const goalDraft: GoalDraft = {
+    const goalInput: GoalInput = {
       title,
       description,
       importance,
@@ -65,7 +65,7 @@ export function GoalForm(props: GoalFormProps) {
       minimumRestHours: goalRest,
     };
     const succeeded = props.mode === 'create'
-      ? await props.onSubmit(goalDraft, {
+      ? await props.onSubmit(goalInput, {
           title: activityTitle,
           description: activityDescription,
           minimumMinutes,
@@ -76,7 +76,7 @@ export function GoalForm(props: GoalFormProps) {
           suggestedCadenceDays: activityCadence === '' ? null : Number(activityCadence),
           rewardWeight,
         })
-      : await props.onSubmit(goalDraft);
+      : await props.onSubmit(goalInput);
     if (succeeded) props.onDone();
   };
 

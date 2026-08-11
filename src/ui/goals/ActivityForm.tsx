@@ -1,17 +1,17 @@
 /**
  * 模块名称：Activity 创建与编辑表单
  * 职责描述：编辑一个 ActivityTemplate 的完整用户可配置字段
- * 输入/输出：接收可选 Activity 初值，提交 ActivityDraft
+ * 输入/输出：接收可选 Activity 初值，提交 ActivityInput
  * 依赖关系：React、Activity 领域类型
  * 注意事项：提交失败时保留输入；createdAt、archivedAt 与 goalId 不由表单修改
  */
 import { useState, type FormEvent } from 'react';
-import type { ActivityDraft, ActivityTemplate } from '../../modules/goals/types';
+import type { ActivityInput, ActivityTemplate } from '../../modules/goals/types';
 
 export function ActivityForm(props: {
   activity?: ActivityTemplate;
   busy: boolean;
-  onSubmit: (draft: ActivityDraft) => Promise<boolean>;
+  onSubmit: (draft: ActivityInput) => Promise<boolean>;
   onCancel: () => void;
   onDone: () => void;
 }) {

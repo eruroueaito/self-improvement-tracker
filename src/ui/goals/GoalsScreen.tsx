@@ -9,7 +9,7 @@ import { useRef, useState, type ChangeEvent } from 'react';
 import type { ImportPreview } from '../../app/importExport';
 import type { AppSnapshot } from '../../app/ports';
 import { selectGoalCatalogItems } from '../../app/selectors';
-import type { ActivityDraft, GoalDraft } from '../../modules/goals/types';
+import type { ActivityInput, GoalInput } from '../../modules/goals/types';
 import type { AppSettings } from '../../modules/settings/settings';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { DevelopmentSeedPanel } from './DevelopmentSeedPanel';
@@ -18,7 +18,7 @@ import { GoalForm } from './GoalForm';
 export function GoalsScreen(props: {
   snapshot: AppSnapshot;
   busy: boolean;
-  onCreate: (goal: GoalDraft, activity: ActivityDraft) => Promise<boolean>;
+  onCreate: (goal: GoalInput, activity: ActivityInput) => Promise<boolean>;
   onOpenGoal: (goalId: string) => void;
   onExport: () => Promise<void>;
   onPreviewImport: (contents: string) => ImportPreview;

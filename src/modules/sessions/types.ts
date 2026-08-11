@@ -41,7 +41,7 @@ export interface Session {
 
 export type SessionEndAction = 'finish' | 'interrupt' | 'abandon';
 
-export interface SettlementDraft {
+export interface SettlementInput {
   actualMinutes: number;
   completionRatio: number;
   difficulty?: 1 | 2 | 3 | 4 | 5 | null;

@@ -5,8 +5,8 @@
  * 依赖关系：领域模块与 ports，不依赖具体 React/SQLite 实现
  * 注意事项：所有多事实修改先在副本完成，再通过 DataStore.replace 一次提交
  */
-import type { ActivityDraft, ActivityTemplate, Goal, GoalDraft, GoalStatus } from '../modules/goals/types';
-import { normalizeActivityDraft, normalizeGoalDraft, ValidationError } from '../modules/goals/validation';
+import type { ActivityInput, ActivityTemplate, Goal, GoalInput, GoalStatus } from '../modules/goals/types';
+import { normalizeActivityInput, normalizeGoalInput, ValidationError } from '../modules/goals/validation';
 import { runRollEngine } from '../modules/recommendations/rollEngine';
 import type { RollContext, RollResult } from '../modules/recommendations/types';
 import { calculateXp, emptyCompanionProjection, rebuildCompanionProjection } from '../modules/rewards/rewardEngine';
@@ -20,7 +20,7 @@ import {
   recoverSession,
   resumeSession,
 } from '../modules/sessions/sessionMachine';
-import type { Session, SessionEndAction, SettlementDraft, TimerMode } from '../modules/sessions/types';
+import type { Session, SessionEndAction, SettlementInput, TimerMode } from '../modules/sessions/types';
 import { createDefaultAppSettings, normalizeAppSettings, type AppSettings } from '../modules/settings/settings';
 import {
   buildExportEnvelope,
@@ -103,7 +103,7 @@ export class MvpApplication {
     this.snapshot = next;
   }
 
-  private buildActivity(goalId: string, normalized: ActivityDraft, now: number, id: string): ActivityTemplate {
+  private buildActivity(goalId: string, normalized: ActivityInput, now: number, id: string): ActivityTemplate {
     return {
       id,
       goalId,
@@ -127,9 +127,9 @@ export class MvpApplication {
     return activity;
   }
 
-  async createGoal(goalDraft: GoalDraft, activityDraft: ActivityDraft): Promise<CreateGoalResult> {
-    const normalizedGoal = normalizeGoalDraft(goalDraft);
-    const normalizedActivity = normalizeActivityDraft(activityDraft);
+  async createGoal(goalInput: GoalInput, activityInput: ActivityInput): Promise<CreateGoalResult> {
+    const normalizedGoal = normalizeGoalInput(goalInput);
+    const normalizedActivity = normalizeActivityInput(activityInput);
     const now = this.clock.now();
     const goal: Goal = {
       id: this.ids.next(),
@@ -152,10 +152,10 @@ export class MvpApplication {
     return { goal: structuredClone(goal), activity: structuredClone(activity) };
   }
 
-  async createActivity(goalId: string, activityDraft: ActivityDraft): Promise<ActivityTemplate> {
+  async createActivity(goalId: string, activityInput: ActivityInput): Promise<ActivityTemplate> {
     const next = this.getSnapshot();
     if (!next.goals.some((goal) => goal.id === goalId)) throw new ValidationError('目标不存在');
-    const normalizedActivity = normalizeActivityDraft(activityDraft);
+    const normalizedActivity = normalizeActivityInput(activityInput);
     const activity = this.buildActivity(goalId, normalizedActivity, this.clock.now(), this.ids.next());
     next.activities.push(activity);
     await this.commit(next);
@@ -171,8 +171,8 @@ export class MvpApplication {
     await this.commit(next);
   }
 
-  async updateGoal(goalId: string, goalDraft: GoalDraft): Promise<void> {
-    const normalizedGoal = normalizeGoalDraft(goalDraft);
+  async updateGoal(goalId: string, goalInput: GoalInput): Promise<void> {
+    const normalizedGoal = normalizeGoalInput(goalInput);
     const next = this.getSnapshot();
     const goal = next.goals.find((candidate) => candidate.id === goalId);
     if (!goal) throw new ValidationError('目标不存在');
@@ -189,8 +189,8 @@ export class MvpApplication {
     await this.commit(next);
   }
 
-  async updateActivity(goalId: string, activityId: string, activityDraft: ActivityDraft): Promise<void> {
-    const normalizedActivity = normalizeActivityDraft(activityDraft);
+  async updateActivity(goalId: string, activityId: string, activityInput: ActivityInput): Promise<void> {
+    const normalizedActivity = normalizeActivityInput(activityInput);
     const next = this.getSnapshot();
     const activity = this.findActivityForGoal(next, goalId, activityId);
     Object.assign(activity, {
@@ -336,7 +336,7 @@ export class MvpApplication {
     return { session: structuredClone(result.session), needsTimeConfirmation: result.needsTimeConfirmation };
   }
 
-  async settle(sessionId: string, draft: SettlementDraft): Promise<RewardLedgerEntry> {
+  async settle(sessionId: string, draft: SettlementInput): Promise<RewardLedgerEntry> {
     const existing = this.current().rewardEntries.find((entry) => entry.idempotencyKey === `settle:${sessionId}:v1`);
     if (existing) return structuredClone(existing);
 

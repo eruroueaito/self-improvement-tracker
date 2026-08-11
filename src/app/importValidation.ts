@@ -6,7 +6,7 @@
  * 注意事项：宠物投影仅验证存在，调用方必须从奖励账本重建而非信任缓存
  */
 import type { ActivityTemplate, Goal } from '../modules/goals/types';
-import { normalizeActivityDraft, normalizeGoalDraft, ValidationError } from '../modules/goals/validation';
+import { normalizeActivityInput, normalizeGoalInput, ValidationError } from '../modules/goals/validation';
 import type { RecommendationRun } from '../modules/recommendations/types';
 import type { CompanionProjection, RewardLedgerEntry } from '../modules/rewards/types';
 import { normalizeSettlement } from '../modules/sessions/sessionMachine';
@@ -136,7 +136,7 @@ export const validateSnapshotFacts = (value: unknown): ValidatedImportData => {
           ? { type: 'experience' as const }
           : null;
     if (!normalizedFeedback) throw new ValidationError(`goals[${index}].feedback 无效`);
-    normalizeGoalDraft({
+    normalizeGoalInput({
       title: text(goal.title, `goals[${index}].title`),
       description: boundedString(goal.description, `goals[${index}].description`, 2_000),
       importance: finite(goal.importance, 'importance') as Goal['importance'],
@@ -154,7 +154,7 @@ export const validateSnapshotFacts = (value: unknown): ValidatedImportData => {
     rating(activity.energyCost, `activities[${index}].energyCost`);
     if (!goalIds.has(text(activity.goalId, `activities[${index}].goalId`))) throw new ValidationError('活动引用了不存在的目标');
     const contexts = array(activity.contexts, `activities[${index}].contexts`).map((item) => text(item, 'context'));
-    normalizeActivityDraft({
+    normalizeActivityInput({
       title: text(activity.title, `activities[${index}].title`),
       description: boundedString(activity.description, `activities[${index}].description`, 2_000),
       minimumMinutes: finite(activity.minimumMinutes, 'minimumMinutes'),

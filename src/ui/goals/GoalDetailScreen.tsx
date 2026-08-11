@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import type { AppSnapshot } from '../../app/ports';
 import { selectGoalDetail } from '../../app/selectors';
-import type { ActivityDraft, GoalDraft, GoalStatus } from '../../modules/goals/types';
+import type { ActivityInput, GoalInput, GoalStatus } from '../../modules/goals/types';
 import { ActivityForm } from './ActivityForm';
 import { GoalFeedbackCard } from './GoalFeedbackCard';
 import { GoalForm } from './GoalForm';
@@ -18,10 +18,10 @@ export function GoalDetailScreen(props: {
   goalId: string;
   busy: boolean;
   onBack: () => void;
-  onUpdateGoal: (goalId: string, draft: GoalDraft) => Promise<boolean>;
+  onUpdateGoal: (goalId: string, draft: GoalInput) => Promise<boolean>;
   onStatus: (goalId: string, status: GoalStatus) => Promise<void>;
-  onCreateActivity: (goalId: string, draft: ActivityDraft) => Promise<boolean>;
-  onUpdateActivity: (goalId: string, activityId: string, draft: ActivityDraft) => Promise<boolean>;
+  onCreateActivity: (goalId: string, draft: ActivityInput) => Promise<boolean>;
+  onUpdateActivity: (goalId: string, activityId: string, draft: ActivityInput) => Promise<boolean>;
   onArchiveActivity: (goalId: string, activityId: string) => Promise<void>;
   onRestoreActivity: (goalId: string, activityId: string) => Promise<void>;
   onOpenHistory: (goalId: string) => void;

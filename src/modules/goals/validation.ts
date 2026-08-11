@@ -5,7 +5,7 @@
  * 依赖关系：目标领域类型
  * 注意事项：错误消息可直接用于本地 UI，不包含实现细节
  */
-import type { ActivityDraft, FeedbackConfig, GoalDraft } from './types';
+import type { ActivityInput, FeedbackConfig, GoalInput } from './types';
 
 export class ValidationError extends Error {
   constructor(message: string) {
@@ -41,7 +41,7 @@ const validateFeedback = (feedback: FeedbackConfig): FeedbackConfig => {
   };
 };
 
-export const normalizeGoalDraft = (draft: GoalDraft): GoalDraft => {
+export const normalizeGoalInput = (draft: GoalInput): GoalInput => {
   assertFiniteRange(draft.importance, 1, 5, '重要性');
   assertFiniteRange(draft.defaultEnergyCost, 1, 5, '默认精力消耗');
   const cadence = draft.desiredCadenceDays ?? null;
@@ -63,7 +63,7 @@ export const normalizeGoalDraft = (draft: GoalDraft): GoalDraft => {
 export const normalizeContexts = (contexts: string[]): string[] =>
   [...new Set(contexts.map((value) => value.trim().toLowerCase()).filter(Boolean))].sort();
 
-export const normalizeActivityDraft = (draft: ActivityDraft): ActivityDraft => {
+export const normalizeActivityInput = (draft: ActivityInput): ActivityInput => {
   if (!Number.isInteger(draft.minimumMinutes) || !Number.isInteger(draft.maximumMinutes)) {
     throw new ValidationError('活动时长必须是整数分钟');
   }

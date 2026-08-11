@@ -1,19 +1,19 @@
 /**
  * 模块名称：Settlement 页面
  * 职责描述：收集用户确认的实际时长、完成比例、投入、难度、数量和备注
- * 输入/输出：接收 ended Session，输出经过应用层事务提交的 SettlementDraft
+ * 输入/输出：接收 ended Session，输出经过应用层事务提交的 SettlementInput
  * 依赖关系：React、Goal/Session 领域类型
  * 注意事项：用户确认前不写奖励，页面不能更改 endType
  */
 import { useState, type FormEvent } from 'react';
 import type { Goal } from '../../modules/goals/types';
-import type { Session, SettlementDraft } from '../../modules/sessions/types';
+import type { Session, SettlementInput } from '../../modules/sessions/types';
 
 export function SettlementScreen(props: {
   session: Session;
   goal: Goal | undefined;
   busy: boolean;
-  onSettle: (draft: SettlementDraft) => Promise<void>;
+  onSettle: (draft: SettlementInput) => Promise<void>;
 }) {
   const [actualMinutes, setActualMinutes] = useState(Math.round(props.session.accumulatedMs / 60_000 * 10) / 10);
   const [completionRatio, setCompletionRatio] = useState(props.session.endType === 'completed' ? 1 : props.session.endType === 'abandoned' ? 0 : 0.5);
