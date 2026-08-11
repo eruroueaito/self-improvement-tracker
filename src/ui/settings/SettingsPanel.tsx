@@ -6,12 +6,24 @@
  * 注意事项：控件只保存本地策略，不请求系统权限、不持有凭据、不发起网络请求
  */
 import type { ChangeEvent } from 'react';
+import type { AiConnectionTestOutcome, TestAiConnectionInput } from '../../app/aiGoalDraftService';
+import type { ProviderCredentials } from '../../modules/ai/credentials';
 import type { AppSettings } from '../../modules/settings/settings';
+import { AiProviderSettings } from './AiProviderSettings';
 
 export function SettingsPanel(props: {
   settings: AppSettings;
   busy: boolean;
-  onChange: (settings: AppSettings) => Promise<void>;
+  onChange: (settings: AppSettings) => Promise<boolean>;
+  aiActions: {
+    credentialsConfigured: boolean;
+    historyCount: number;
+    onSaveSettings: (settings: AppSettings) => Promise<boolean>;
+    onSaveCredentials: (credentials: ProviderCredentials) => Promise<boolean>;
+    onDeleteCredentials: () => Promise<boolean>;
+    onTestConnection: (input: TestAiConnectionInput) => Promise<AiConnectionTestOutcome>;
+    onClearHistory: () => Promise<boolean>;
+  };
 }) {
   const update = (settings: AppSettings): void => {
     void props.onChange(settings);
@@ -47,11 +59,20 @@ export function SettingsPanel(props: {
         ...props.settings,
         ai: { ...props.settings.ai, enabled: event.target.checked },
       })} />启用 AI 功能策略（不含 API 密钥）</label>
+      <label className="toggle"><input type="checkbox" checked={props.settings.ai.goalDraftEnabled} onChange={(event) => update({
+        ...props.settings,
+        ai: { ...props.settings.ai, goalDraftEnabled: event.target.checked },
+      })} />允许主动生成 GoalDraft</label>
       <label className="toggle"><input type="checkbox" checked={props.settings.ai.historyEnabled} onChange={(event) => update({
         ...props.settings,
         ai: { ...props.settings.ai, historyEnabled: event.target.checked },
-      })} />允许 AI 使用本地历史策略</label>
-      <small>这些开关只保存在本机。AI 默认关闭，本阶段不会连接模型或请求额外权限。</small>
+      })} />保存本地 AI 调用历史（可能包含目标原文）</label>
+      <small>这些开关只保存在本机。AI 默认关闭，手动目标流程始终可用。</small>
+      <AiProviderSettings
+        settings={props.settings}
+        busy={props.busy}
+        {...props.aiActions}
+      />
     </fieldset>
   );
 }

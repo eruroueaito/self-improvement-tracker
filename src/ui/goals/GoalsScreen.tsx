@@ -7,24 +7,37 @@
  */
 import { useRef, useState, type ChangeEvent } from 'react';
 import type { ImportPreview } from '../../app/importExport';
+import type { AiConnectionTestOutcome, TestAiConnectionInput } from '../../app/aiGoalDraftService';
+import type { GenerateAiGoalDraftResult } from '../../app/mvpApplication';
 import type { AppSnapshot } from '../../app/ports';
 import { selectGoalCatalogItems } from '../../app/selectors';
 import type { ActivityInput, GoalInput } from '../../modules/goals/types';
 import type { AppSettings } from '../../modules/settings/settings';
+import type { ProviderCredentials } from '../../modules/ai/credentials';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { DevelopmentSeedPanel } from './DevelopmentSeedPanel';
 import { GoalForm } from './GoalForm';
+import { AiGoalDraftPanel } from './AiGoalDraftPanel';
 
 export function GoalsScreen(props: {
   snapshot: AppSnapshot;
   busy: boolean;
   onCreate: (goal: GoalInput, activity: ActivityInput) => Promise<boolean>;
   onOpenGoal: (goalId: string) => void;
-  onExport: () => Promise<void>;
+  onExport: (includeAiHistory: boolean) => Promise<void>;
   onPreviewImport: (contents: string) => ImportPreview;
   onConfirmImport: (contents: string) => Promise<boolean>;
-  onSettingsChange: (settings: AppSettings) => Promise<void>;
+  onSettingsChange: (settings: AppSettings) => Promise<boolean>;
   onClear: () => Promise<void>;
+  aiSettings: {
+    credentialsConfigured: boolean;
+    onSaveCredentials: (credentials: ProviderCredentials) => Promise<boolean>;
+    onDeleteCredentials: () => Promise<boolean>;
+    onTestConnection: (input: TestAiConnectionInput) => Promise<AiConnectionTestOutcome>;
+    onClearHistory: () => Promise<boolean>;
+    onGenerate: (input: string, signal: AbortSignal) => Promise<GenerateAiGoalDraftResult>;
+    onConfirmDraft: (goal: GoalInput, activities: ActivityInput[]) => Promise<boolean>;
+  };
   developmentSeed?: {
     installed: boolean;
     onInstall: () => Promise<void>;
@@ -34,8 +47,15 @@ export function GoalsScreen(props: {
   const [createOpen, setCreateOpen] = useState(props.snapshot.goals.length === 0);
   const [pendingImport, setPendingImport] = useState<{ contents: string; preview: ImportPreview } | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [includeAiHistory, setIncludeAiHistory] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const catalogItems = selectGoalCatalogItems(props.snapshot);
+  const aiReady = props.snapshot.settings.ai.enabled
+    && props.snapshot.settings.ai.goalDraftEnabled
+    && props.snapshot.settings.ai.provider.model.length > 0
+    && props.aiSettings.credentialsConfigured;
+  let aiHost = '未配置 endpoint';
+  try { aiHost = new URL(props.snapshot.settings.ai.provider.baseUrl).host; } catch { /* 配置错误由提示和本地校验处理 */ }
 
   const importFile = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.target.files?.[0];
@@ -67,6 +87,18 @@ export function GoalsScreen(props: {
         <button className="button secondary" onClick={() => setCreateOpen((open) => !open)}>{createOpen ? '收起' : '新建目标'}</button>
       </section>
 
+      {aiReady ? (
+        <AiGoalDraftPanel
+          endpointHost={aiHost}
+          model={props.snapshot.settings.ai.provider.model}
+          busy={props.busy}
+          onGenerate={props.aiSettings.onGenerate}
+          onConfirm={props.aiSettings.onConfirmDraft}
+        />
+      ) : (
+        <p className="card ai-unavailable">AI 起草当前未启用或未完整配置。手动创建始终可用；如需启用，请在“本地数据与设置”中完成总开关、GoalDraft 开关、模型和当前 endpoint 凭据。</p>
+      )}
+
       {createOpen && (
         <GoalForm
           mode="create"
@@ -95,7 +127,16 @@ export function GoalsScreen(props: {
 
       <details className="card settings">
         <summary>本地数据与设置</summary>
-        <SettingsPanel settings={props.snapshot.settings} busy={props.busy} onChange={props.onSettingsChange} />
+        <SettingsPanel
+          settings={props.snapshot.settings}
+          busy={props.busy}
+          onChange={props.onSettingsChange}
+          aiActions={{
+            ...props.aiSettings,
+            historyCount: props.snapshot.aiInteractions.length,
+            onSaveSettings: props.onSettingsChange,
+          }}
+        />
         {props.developmentSeed && (
           <DevelopmentSeedPanel
             installed={props.developmentSeed.installed}
@@ -105,11 +146,17 @@ export function GoalsScreen(props: {
           />
         )}
         <hr />
-        <p>导出包含全部目标、专注、历史、奖励和非秘密设置，不包含密钥。</p>
+        <p>导出包含目标、专注、奖励和非秘密设置，不包含密钥。AI 历史默认排除。</p>
+        <label className="toggle"><input
+          type="checkbox"
+          checked={includeAiHistory}
+          disabled={props.busy || props.snapshot.aiInteractions.length === 0}
+          onChange={(event) => setIncludeAiHistory(event.target.checked)}
+        />本次导出包含 {props.snapshot.aiInteractions.length} 条 AI 历史（可能包含目标原文）</label>
         <div className="actions">
-          <button disabled={props.busy} onClick={() => void props.onExport()}>导出 JSON</button>
+          <button disabled={props.busy} onClick={() => void props.onExport(includeAiHistory)}>导出 JSON</button>
           <button disabled={props.busy} onClick={() => fileRef.current?.click()}>导入 JSON</button>
-          <button disabled={props.busy} className="danger" onClick={() => void props.onClear()}>清空全部本地数据</button>
+          <button disabled={props.busy} className="danger" onClick={() => void props.onClear()}>清空目标、活动与历史（保留 AI 凭据）</button>
           <input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={(event) => void importFile(event)} />
         </div>
         {importError && <div className="message error import-message" role="alert">{importError}</div>}

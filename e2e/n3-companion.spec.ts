@@ -74,7 +74,7 @@ test('rebuilds peak stage and unlock logic while the placeholder stays static', 
   expect(await page.locator('.companion-avatar.motion-reduced [data-part="placeholder"]').first().evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
 
   await page.getByRole('button', { name: '目标', exact: true }).click();
-  await page.getByText('本地数据与设置').click();
+  await page.getByText('本地数据与设置', { exact: true }).click();
   await page.getByLabel('动态效果').selectOption('none');
   await expect(page.getByText('设置已保存在本机。')).toBeVisible();
   await page.reload();

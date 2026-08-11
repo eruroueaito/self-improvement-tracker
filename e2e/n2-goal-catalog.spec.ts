@@ -102,7 +102,7 @@ test('installs, clears and reinstalls deterministic development seeds explicitly
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.getByRole('button', { name: '目标', exact: true }).click();
-  await page.getByText('本地数据与设置').click();
+  await page.getByText('本地数据与设置', { exact: true }).click();
   await page.getByText('开发种子数据').click();
   await expect(page.getByText('开发种子未安装')).toBeVisible();
 

@@ -573,13 +573,13 @@ export class MvpApplication {
     return this.aiGoalDraftService.testConnection(input);
   }
 
-  exportData(): string {
-    return JSON.stringify(buildExportEnvelope(this.current(), this.clock.now()));
+  exportData(options: { includeAiHistory?: boolean } = {}): string {
+    return JSON.stringify(buildExportEnvelope(this.current(), this.clock.now(), options));
   }
 
-  async exportToFile(): Promise<void> {
+  async exportToFile(options: { includeAiHistory?: boolean } = {}): Promise<void> {
     const filename = `self-improvement-tracker-${new Date(this.clock.now()).toISOString().slice(0, 10)}.json`;
-    await this.exportFiles.save(this.exportData(), filename);
+    await this.exportFiles.save(this.exportData(options), filename);
   }
 
   getRecoveryExportStatus(): Pick<RecoveryExport, 'sourceVersion' | 'settingsRecovered'> | null {

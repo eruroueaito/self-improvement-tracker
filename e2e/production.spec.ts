@@ -35,7 +35,7 @@ test('production navigation exposes no development seed path or facts', async ({
   await expectSeedControlsAbsent(page);
 
   await page.getByRole('button', { name: '目标', exact: true }).click();
-  await page.getByText('本地数据与设置').click();
+  await page.getByText('本地数据与设置', { exact: true }).click();
   await expectSeedControlsAbsent(page);
   await page.getByLabel('目标名称').fill('正式目标');
   await page.getByLabel('第一个活动').fill('正式活动');

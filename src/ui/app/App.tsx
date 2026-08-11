@@ -34,6 +34,7 @@ const EMPTY_REASON: Record<EmptyRollReason, string> = {
 export function App() {
   const application = useMemo(() => createMvpApplication(), []);
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
+  const [credentialsConfigured, setCredentialsConfigured] = useState(false);
   const [screen, setScreen] = useState<Screen>('roll');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
@@ -132,6 +133,15 @@ export function App() {
     await execute(operation);
   };
 
+  useEffect(() => {
+    if (!snapshot) return;
+    let active = true;
+    void application.hasProviderCredentials()
+      .then((configured) => { if (active) setCredentialsConfigured(configured); })
+      .catch(() => { if (active) setCredentialsConfigured(false); });
+    return () => { active = false; };
+  }, [application, snapshot?.settings.ai.provider.baseUrl, snapshot?.settings.ai.provider.protocol]);
+
   if (!snapshot) {
     if (initializing) return <main className="loading" aria-live="polite">正在打开本地数据…</main>;
     return (
@@ -202,7 +212,7 @@ export function App() {
               setScreen('goal-detail');
               setError(null);
             }}
-            onExport={() => executeCommand(() => application.exportToFile())}
+            onExport={(includeAiHistory) => executeCommand(() => application.exportToFile({ includeAiHistory }))}
             onPreviewImport={(contents) => application.previewImport(contents)}
             onConfirmImport={(contents) => execute(async () => {
               await application.confirmImport(contents);
@@ -216,19 +226,75 @@ export function App() {
               setScreen(active ? 'focus' : ended ? 'settlement' : 'goals');
               setNotice('导入完成，宠物进度已从奖励账本重建。');
             })}
-            onSettingsChange={(settings) => executeCommand(async () => {
+            onSettingsChange={(settings) => execute(async () => {
               await application.updateSettings(settings);
               setNotice('设置已保存在本机。');
             })}
             onClear={() => executeCommand(async () => {
-              if (!window.confirm('确定清空全部本地目标、专注、历史和奖励吗？此操作不能撤销。')) return;
+              if (!window.confirm('确定清空本机目标、活动、专注、奖励和 AI 历史吗？已保存的 AI 凭据会保留，删除凭据需使用独立按钮。')) return;
               await application.clearAllData();
               setCurrentRunId(null);
               setSelectedGoalId(null);
               setInitialHistoryGoalId(null);
               setScreen('goals');
-              setNotice('全部本地数据已清空。');
+              setNotice('目标、活动与历史已清空；AI 凭据仍保留。');
             })}
+            aiSettings={{
+              credentialsConfigured,
+              onSaveCredentials: (credentials) => execute(async () => {
+                await application.saveProviderCredentials(credentials);
+                setCredentialsConfigured(true);
+                setNotice('AI 凭据已安全保存。');
+              }),
+              onDeleteCredentials: () => execute(async () => {
+                await application.deleteProviderCredentials();
+                setCredentialsConfigured(false);
+                setNotice('AI 凭据已删除。');
+              }),
+              onTestConnection: async (input) => {
+                if (commandInFlight.current) return { ok: false, error: 'cancelled' };
+                commandInFlight.current = true;
+                setBusy(true);
+                setError(null);
+                try {
+                  return await application.testAiProviderConnection(input);
+                } catch {
+                  setError('连接测试失败');
+                  return { ok: false, error: 'unavailable' };
+                } finally {
+                  commandInFlight.current = false;
+                  setBusy(false);
+                }
+              },
+              onClearHistory: () => execute(async () => {
+                await application.clearAiHistory();
+                setNotice('AI 历史已清空，凭据未改变。');
+              }),
+              onGenerate: async (input, signal) => {
+                if (commandInFlight.current) {
+                  return { ok: false, error: 'cancelled', interactionCandidate: null, historyWarning: null };
+                }
+                commandInFlight.current = true;
+                setBusy(true);
+                setError(null);
+                try {
+                  const outcome = await application.generateAiGoalDraft(input, signal);
+                  refresh();
+                  if (outcome.historyWarning) setNotice(`草稿已返回，但 AI 历史记录出现警告：${outcome.historyWarning}`);
+                  return outcome;
+                } catch {
+                  setError('AI GoalDraft 生成失败');
+                  return { ok: false, error: 'unavailable', interactionCandidate: null, historyWarning: null };
+                } finally {
+                  commandInFlight.current = false;
+                  setBusy(false);
+                }
+              },
+              onConfirmDraft: (goal, activities) => execute(async () => {
+                await application.createGoalWithActivities(goal, activities);
+                setNotice(`AI 草稿已确认：1 个目标和 ${activities.length} 个活动保存在本机。`);
+              }),
+            }}
             developmentSeed={import.meta.env.DEV ? {
               installed: hasDevelopmentSeedFacts(snapshot),
               onInstall: () => executeCommand(async () => {
